@@ -717,51 +717,56 @@ declare
                 from Pays p2
                 where p1.customerId = p2.customerId and
                 (extract(month from current_date) - extract(month from  courseSessionDate) <= 6)
-            )
-            union
-            select customerId
-            from Customers
-            where customerId not in (
-                select distinct customerId
-                from Redeems 
-            ) and customerId not in (
-                select distinct customerId
-                from Pays 
-            )
+            )            
             order by customerId asc
-        ), InactivePackageCustomers as (
-			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-			from InactiveC natural join Redeems
-			order by customerId asc
-		), InactivePayCustomers as (
-			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-			from InactiveC natural join Pays
-			order by customerId asc
-		), InactiveCustomers as (
-			select * from InactivePayCustomers
+			), InactivePackageCustomers as (
+						select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+						from InactiveC natural join Redeems
+						order by customerId asc
+			), InactivePayCustomers as (
+						select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+						from InactiveC natural join Pays
+						order by customerId asc
+			), InactiveCustomers as (
+						select * from InactivePayCustomers
+						union
+						select * from InactivePackageCustomers
+			), EmptyCustomers as (
+					select C.customerId, R.courseId, R.offeringId, R.courseSessionDate, R.courseSessionHour
+						from Customers C left outer join Redeems R on C.customerId = R.customerId
+						where C.customerId not in (
+							select distinct customerId
+							from Redeems 
+						) and C.customerId not in (
+							select distinct customerId
+							from Pays 
+						)
+			)
+			select *
+			from InactiveCustomers
 			union
-			select * from InactivePackageCustomers
-		)
-		
-		select *
-		from InactiveCustomers
-		order by customerId
-    );
+			select *
+			from EmptyCustomers
+			order by customerId asc
+		);
 
     r record;
+	customer_name text;
     currentCustomer int;
     currentArea  text;
     courseOfferingArr int[];
     coursesArr int[];
+	courseAreasArr text[];
     countCustomer int;
-	i int;
+	i text;
+	x int;
+	b int;
 begin
 
     currentCustomer = -1;
     open cur;
     loop
         fetch cur into r;
-		raise notice 'CustomerID: %', r.customerId;
         exit when not found;
 
         if currentCustomer = r.customerId then
@@ -770,7 +775,30 @@ begin
                 countCustomer = countCustomer + 1;
 
                 if currentArea <> (select areaName from Courses where courseId = r.courseId) then
-				
+					select customerName into customer_name
+						from Customers
+						where r.customerId = customerId;
+					
+					select areaName into currentArea from Courses where courseId = r.courseId;
+					
+					return query (
+					select case when true then r.customerId end customer_id,
+						case when true then customer_name end customer_name,
+						areaName as course_area, courseId as course_id,
+						courseTitle as course_title, 
+						launchDate as launch_date,
+						registrationDeadline as registration_deadline,
+						courseFee as fees
+					from Courses natural join CourseOfferings
+					where launchDate <= current_date and
+						registrationDeadline >= current_date and
+						areaName = currentArea
+					order by registrationDeadline asc
+					);
+				end if;
+			end if;
+		
+					/*
                     select areaName into currentArea from Courses where courseId = r.courseId;
                     courseOfferingArr = array(
                         select offeringId, registrationDeadline
@@ -798,43 +826,75 @@ begin
                 -- enter here if current customer does not like any courses
             end if;
         -- different customer
+		*/
         else
 
             currentCustomer = r.customerId;
             countCustomer = 0;
 
             if r.courseId is null then
-                coursesArr = array(
-                    select coursesId
+				
+				select customerName into customer_name
+				from Customers
+				where r.customerId = customerId;
+				return query (
+					select case when true then r.customerId end customer_id,
+						case when true then customer_name end customer_name,
+						areaName as course_area, courseId as course_id,
+						courseTitle as course_title, 
+						launchDate as launch_date,
+						registrationDeadline as registration_deadline,
+						courseFee as fees
+					from Courses natural join CourseOfferings
+					where launchDate <= current_date and
+						registrationDeadline >= current_date
+					order by registrationDeadline asc
+				);
+				/*
+                courseAreasArr = array(
+                    select areaname
                     from Courses
                 );
-
-                foreach i in array coursesArr
+				
+                foreach i in array courseAreasArr
                 LOOP
-                    select areaName into currentArea from Courses where courseId = coursesArr[i];
-                    courseOfferingArr = array(
-                        select offeringId, registrationDeadline
-                        from CourseOffering
-                        where coursesArr[i] = courseId and
-                        launchDate <= current_date and
-                        registrationDeadline >= current_date
-                        order by registrationDeadline asc
-                    );
+                    currentArea := i;
+					
+					coursesArr = array(
+						select courseId
+						from Courses
+						where areaName = currentArea
+					);
+					foreach x in array coursesArr
+						LOOP
+						courseOfferingArr = array(
+							With SortedOfferings as (
+								select offeringId, registrationDeadline
+								from CourseOfferings
+								where x = courseId and
+								launchDate <= current_date and
+								registrationDeadline >= current_date
+								order by registrationDeadline asc
+							)
+							select offeringId
+							from SortedOfferings
+						);
 
-                    foreach i in array courseOfferingArr
-                    loop
-                        customer_id := r.customerId;
-                        select customerName into customer_name from Customers where customerId = r.customerId;
-                        course_area := currentArea;
-                        course_id := coursesArr[i];
-                        select courseTitle into course_title from Courses where courseId = coursesArr[i];
-                        
-                        select launchDate, registrationDeadline, courseFee into launch_date,registration_deadline, fees
-                        from CourseOfferings
-                        where courseId = coursesArr[i] and offeringId = courseOfferingArr[i];
-                        return next;
+						foreach b in array courseOfferingArr
+						loop
+							customer_id := r.customerId;
+							select customerName into customer_name from Customers where customerId = r.customerId;
+							course_area := i;
+							course_id := x;
+							select courseTitle into course_title from Courses where courseId = x;
+
+							select launchDate, registrationDeadline, courseFee into launch_date,registration_deadline, fees
+							from CourseOfferings
+							where courseId = x and offeringId = b;
+							return next;
+						end loop;
 					end loop;
-				end loop;
+				end loop;*/
             end if;
         end if;
 	end loop;
