@@ -563,7 +563,7 @@ $$ language plpgsql;
 --Function 17
 
 create or replace procedure register_session(
-    customer int, course_id int, offering_id int, session_number int, payment_method int
+    customer int, course_id int, offering_id int, sess_date date, sess_hour int, payment_method int
 ) as $$
 declare
     customerPackageId int;
@@ -579,11 +579,8 @@ begin
         from Purchases
         where  customerId = customer;
 
-        
-        select sessDate, sessHour into csDate, csHour from CourseSessions where courseId = course_id and offeringId = offering_id and sessionId = session_number;
-
         insert into Redeems (customerId, packageId, redeemDate, purchaseDate, courseId, offeringId, courseSessionDate, courseSessionHour)
-        values(customer, customerPackageId, CURRENT_DATE, purchase_date, course_id, offering_id, csDate, csHour);
+        values(customer, customerPackageId, CURRENT_DATE, purchase_date, course_id, offering_id, sess_date, sess_hour);
 		
 		update Purchases
 		set sessionsLeft = sessionsLeft - 1
@@ -591,10 +588,8 @@ begin
                 
     elseif payment_method = 0 then
 
-        select sessDate, sessHour into csDate, csHour from CourseSessions where courseId = course_id and offering_id = offeringId;
-
         insert into Pays (customerId, courseId, offeringId, courseSessionDate, courseSessionHour, paymentDate)
-        values(customer, course_id, offering_id, csDate, csHour, CURRENT_DATE);
+        values(customer, course_id, offering_id, sess_date, sess_hour, CURRENT_DATE);
 	else
 		raise exception 'Incorrect parameters for payment method!';
 	end if;
@@ -711,7 +706,7 @@ declare
             where r1.customerId not in (
                 select customerId
                 from Redeems r2
-                where r1.customerId = r2.customerId and r1.redeemId <> r2.redeemId and
+                where r1.customerId = r2.customerId and
                 (extract(month from current_date) - extract(month from  r2.courseSessionDate) <= 6)
             )
             union
@@ -720,7 +715,7 @@ declare
             where p1.customerId not in (
                 select customerId
                 from Pays p2
-                where p1.customerId = p2.customerId and p1.paymentId <> p2.paymentId and
+                where p1.customerId = p2.customerId and
                 (extract(month from current_date) - extract(month from  courseSessionDate) <= 6)
             )
             union
@@ -981,104 +976,6 @@ begin
     close cur;
 end;
 $$ language plpgsql;
-
--- Triggers
-create or replace function redeem_session_check() returns trigger as $$
-declare
-    customerPackageId int;
-    pStatus text;
-BEGIN
-    if NEW.customerId not in (select customerId from Customers) then
-        raise exception 'Customer does not exist';
-    elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
-        raise exception 'CourseOffering does not exist';
-    elseif row(NEW.courseSessionDate, new.courseSessionHour) not in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId) then
-        raise exception 'This session does not exist';
-    elseif exists (select 1 from Redeems where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
-        raise exception 'Customer already has an existing redemption of this offering' ;
-    elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
-        raise exception 'Customer has already paid for a session in this course offering';
-	elseif (select sessionsLeft from Purchases where NEW.customerId = customerId and new.packageId = packageId) = 0 then
-        raise exception 'This customer has no more sessions left in his package!' ;
-    else
-		return new;
-	end if;
-	
-END;
-
-$$ language plpgsql;
-
-create or replace function pay_session_check() returns trigger as $$
-declare
-    customerPackageId int;
-    pStatus text;
-BEGIN
-    if NEW.customerId not in (select customerId from Customers) then
-        raise exception 'Customer does not exist';
-    elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
-        raise exception 'CourseOffering does not exist';
-    elseif row(NEW.courseSessionDate, new.courseSessionHour) not in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId) then
-        raise exception 'This session does not exist';
-    elseif exists (select 1 from Redeems where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
-        raise exception 'Customer already has an existing redemption of this offering' ;
-    elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
-        raise exception 'Customer has already paid for a session in this course offering';
-    else
-		return new;
-	end if;
-	
-END;
-
-$$ language plpgsql;
-
-create or replace function check_customer_packages_exists() returns trigger as $$
-declare
-	cid int;
- 	customerCC text;
- 	newPackage int;
- 	num_of_active_pactive int;
-begin
-     -- Check if customer already exists
-     select customerId into cid
-     from Customers
-     where new.customerId = customerId;
-
-     -- check if customer credit card already exists
-     select ccNumber into customerCC
-     from Owns
-     where customerid = new.customerId;
-
-     --check if package already exists
-     select packageId into newPackage
-     from CoursePackages
-     where packageId = new.packageId;
-    
-     --check constraint "Each customer can have at most one active or partially active package."
-     select count(customerid) into num_of_active_pactive
-     from Purchases
-     where customerId = new.customerId AND sessionsLeft > 0;
-
-     if (customerCC is null) or (newPackage is null) or (cid is null)  then
-         raise exception 'Invalid details given';
-	end if;
-     if num_of_active_pactive > 0 then
-	 	raise exception 'Customer already has an active/inactive package';
-	end if;
-	 return new;
-end;
-$$ language plpgsql;
-
-create trigger for_session_redeem_check
-before insert or update on Redeems
-for each row execute function redeem_session_check();
-
-create trigger for_session_pay_check
-before insert or update on Pays
-for each row execute function pay_session_check();
-
-create trigger for_buying_package_check
-before insert on Purchases
-for each row execute function check_customer_packages_exists();
 
 
 -- 19. update_course_session
@@ -1877,3 +1774,114 @@ create trigger Pays_checkDuplicateInRedeems_trigger
 BEFORE INSERT OR UPDATE ON Pays
 for each row execute function Pays_checkDuplicateInRedeems();
 */
+
+
+create or replace function redeem_session_check() returns trigger as $$
+declare
+    customerPackageId int;
+    pStatus text;
+BEGIN
+    if NEW.customerId not in (select customerId from Customers) then
+        raise exception 'Customer does not exist';
+    elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
+        raise exception 'CourseOffering does not exist';
+    elseif row(NEW.courseSessionDate, new.courseSessionHour) not in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId) then
+        raise exception 'This session does not exist';
+    elseif exists (select 1 from Redeems where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
+        raise exception 'Customer already has an existing redemption of this offering' ;
+    elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
+        raise exception 'Customer has already paid for a session in this course offering';
+	elseif (select sessionsLeft from Purchases where NEW.customerId = customerId and new.packageId = packageId) = 0 then
+        raise exception 'This customer has no more sessions left in his package!';
+	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+		raise exception 'The registration deadline for this course has passed!';
+	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+		raise exception 'The registration for this course has not started yet!';
+    else
+		return new;
+	end if;
+	
+END;
+
+$$ language plpgsql;
+
+create or replace function pay_session_check() returns trigger as $$
+declare
+    customerPackageId int;
+    pStatus text;
+BEGIN
+    if NEW.customerId not in (select customerId from Customers) then
+        raise exception 'Customer does not exist';
+    elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
+        raise exception 'CourseOffering does not exist';
+    elseif row(NEW.courseSessionDate, new.courseSessionHour) not in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId) then
+        raise exception 'This session does not exist';
+    elseif exists (select 1 from Redeems where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
+        raise exception 'Customer already has an existing redemption of this offering' ;
+    elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
+        raise exception 'Customer has already paid for a session in this course offering';
+	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+		raise exception 'The registration deadline for this course has passed!';
+	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+		raise exception 'The registration for this course has not started yet!';
+    else
+		return new;
+	end if;
+	
+END;
+
+$$ language plpgsql;
+
+create or replace function check_customer_packages_exists() returns trigger as $$
+declare
+	cid int;
+ 	customerCC text;
+ 	newPackage int;
+ 	num_of_active_pactive int;
+	start_date date;
+	end_date date;
+begin
+     -- Check if customer already exists
+     select customerId into cid
+     from Customers
+     where new.customerId = customerId;
+
+     -- check if customer credit card already exists
+     select ccNumber into customerCC
+     from Owns
+     where customerid = new.customerId;
+
+     --check if package already exists
+     select packageId, startDate, endDate into newPackage, start_date, end_date
+     from CoursePackages
+     where packageId = new.packageId;
+    
+     --check constraint "Each customer can have at most one active or partially active package."
+     select count(customerid) into num_of_active_pactive
+     from Purchases
+     where customerId = new.customerId AND sessionsLeft > 0;
+
+     if (customerCC is null) or (newPackage is null) or (cid is null)  then
+         raise exception 'Invalid details given';
+	elseif num_of_active_pactive > 0 then
+	 	raise exception 'Customer already has an active/ partially active package';
+	elseif current_date < start_date then
+		raise exception 'This package is not for sale yet!';
+	elseif CURRENT_DATE > end_date then
+		raise exception 'This package is no longer for sale!';
+	end if;
+	 return new;
+end;
+$$ language plpgsql;
+
+create trigger for_session_redeem_check
+before insert or update on Redeems
+for each row execute function redeem_session_check();
+
+create trigger for_session_pay_check
+before insert or update on Pays
+for each row execute function pay_session_check();
+
+create trigger for_buying_package_check
+before insert on Purchases
+for each row execute function check_customer_packages_exists();
