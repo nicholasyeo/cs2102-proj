@@ -188,7 +188,7 @@ END;
 
 $$ LANGUAGE plpgsql;
 
--- 8. find_rooms 
+-- 8. find_rooms //done
 CREATE OR REPLACE FUNCTION find_rooms(IN selectedDate DATE, IN selectedHour INT, IN selectedDuration INT) 
 RETURNS TABLE (roomId INT) 
 AS $$
@@ -210,9 +210,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- 9. get_available_rooms
+-- 9. get_available_rooms //done
 CREATE OR REPLACE FUNCTION get_available_rooms(IN startDate DATE, IN endDate DATE) 
-RETURNS TABLE (roomId INT, seatingCapacity INT, selectedDay DATE, hours INT[]) 
+RETURNS TABLE (roomId INT, seatingCapacity INT, selectedDay DATE, selectedHours INT[]) 
 AS $$
 
 DECLARE
@@ -221,8 +221,6 @@ DECLARE
 	availDay DATE;
 	adjHours INT[] := '{9,10,11,12,13,14,15,16,17}';
 	counter INT;
-	selectedHr INT;
-	selectedDuration INT;
 	temprow RECORD;
 	
 BEGIN
@@ -240,21 +238,19 @@ BEGIN
 			selectedDay := availDay;
 			
 			FOR temprow IN
-				SELECT * FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
+				SELECT *
+				FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
 				where cs.roomId = r.roomId AND cs.sessDate = availDay
 			LOOP 
-				SELECT cs.sessHour, cr.duration INTO selectedHr, selectedDuration
-				FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
-				where cs.roomId = r.roomId AND cs.sessDate = availDay;
-				counter := selectedHr;
+				counter := temprow.sessHour;
 				LOOP 
-					IF counter <= selectedHr + selectedDuration THEN
-						SELECT array_remove(adjHours, counter);
-						counter = counter + 1;
-					END IF;
+					EXIT WHEN counter >= temprow.sessHour + temprow.duration;
+					adjHours := (SELECT array_remove(adjHours, counter));
+					counter := counter + 1;
 				END LOOP;
 			END LOOP;
-			hours := adjHours;
+			
+			selectedHours := adjHours;
 			RETURN NEXT;
 			adjHours := '{9,10,11,12,13,14,15,16,17}';
 		END LOOP;
@@ -330,14 +326,14 @@ END;
                                                  
 $$ LANGUAGE plpgsql;
 
--- 11. add_course_packages
+-- 11. add_course_packages //done
 CREATE OR REPLACE PROCEDURE add_course_package (packageName TEXT, numSessions INT, startDate DATE, endDate DATE, price MONEY)
 AS $$
 		INSERT INTO CoursePackages (price, startDate, endDate, numSessions, packageName)
 		VALUES (price, startDate, endDate, numSessions, packageName); 				 
 $$ LANGUAGE SQL; 
 
--- 12.get_available_course_pacakages
+-- 12.get_available_course_pacakages //done
 CREATE OR REPLACE FUNCTION get_available_course_packages ()
 RETURNS TABLE (packageName TEXT, numSessions INT, endDate DATE, price MONEY)
 AS $$
