@@ -1754,9 +1754,9 @@ DECLARE
     partiallyActivePackages integer;
 BEGIN
     select count(packageStatus) into activePackages from PurchasesView where customerId = NEW.customerId 
-        and packageId = NEW.packageId and purchaseDate = NEW.purchaseDate and packageStatus = 'active';
+        and packageStatus = 'active';
     select count(packageStatus) into partiallyActivePackages from PurchasesView where customerId = NEW.customerId 
-        and packageId = NEW.packageId and purchaseDate = NEW.purchaseDate and packageStatus = 'partially active';
+        and packageStatus = 'partially active';
  
     IF activePackages >= 1 or partiallyActivePackages >= 1 THEN
         IF NEW.sessionsLeft = 0 THEN
