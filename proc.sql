@@ -36,7 +36,7 @@ begin
     insert into Employees (ename, homeAddress, contactNumber, email, joinDate)
     values (ename, homeAddress, contactNumber, eEmail, joinDate);
 
-    select employeeId into eid from Employees E where E.email = eEmail;
+    select employeeId into eid from Employees E where E.email = eEmail; 
     if (monthlySalary is null) then
         insert into PartTimers values (eid, hourlyRate);
     else
