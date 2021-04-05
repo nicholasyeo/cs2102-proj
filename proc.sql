@@ -333,7 +333,7 @@ AS $$
 		VALUES (price, startDate, endDate, numSessions, packageName); 				 
 $$ LANGUAGE SQL; 
 
--- 12.get_available_course_pacakages //done
+-- 12.get_available_course_pacakages //donegit
 CREATE OR REPLACE FUNCTION get_available_course_packages ()
 RETURNS TABLE (packageName TEXT, numSessions INT, endDate DATE, price MONEY)
 AS $$
