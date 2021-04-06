@@ -81,6 +81,14 @@ INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
 VALUES (60, 3, 2);
 INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
 VALUES (70, 3, 3);
+INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
+VALUES (20, 4, 1);
+INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
+VALUES (30, 4, 2);
+INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
+VALUES (40, 5, 3);
+INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
+VALUES (50, 5, 1);
 
 ----------------------------- MANUALLY ADD CourseOfferings  -----------------------------
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,

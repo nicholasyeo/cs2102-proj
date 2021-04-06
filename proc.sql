@@ -36,7 +36,7 @@ begin
     insert into Employees (ename, homeAddress, contactNumber, email, joinDate)
     values (ename, homeAddress, contactNumber, eEmail, joinDate);
 
-    select employeeId into eid from Employees E where E.email = eEmail;
+    select employeeId into eid from Employees E where E.email = eEmail; 
     if (monthlySalary is null) then
         insert into PartTimers values (eid, hourlyRate);
     else
@@ -188,33 +188,39 @@ END;
 
 $$ LANGUAGE plpgsql;
 
--- 8. find_rooms 
-CREATE OR REPLACE FUNCTION find_rooms(IN sessDate INT, IN sessHour INT, IN sessDuration INT) 
+-- 8. find_rooms //done
+CREATE OR REPLACE FUNCTION find_rooms(IN selectedDate DATE, IN selectedHour INT, IN selectedDuration INT) 
 RETURNS TABLE (roomId INT) 
 AS $$
+DECLARE 
+    curs CURSOR FOR (SELECT * FROM LectureRooms lr LEFT JOIN (CourseSessions cs INNER JOIN Courses cr on cr.courseId = cs.courseId) ON lr.roomId = cs.roomId);
+    r RECORD;
 BEGIN
-	SELECT DISTINCT roomId
-	FROM LectureRooms
-	EXCEPT
-	SELECT DISTINCT roomId
-	FROM LectureRooms INNER JOIN CourseSessions ON roomId
-	WHERE sessDate = sessDate AND (sessHour >= sessHour AND sessHour < sessHour + sessDuration);
+    OPEN curs;
+    LOOP
+        FETCH curs INTO r;
+        EXIT WHEN NOT FOUND;
+        IF ((r.sessDate IS NULL) OR (r.sessDate <> selectedDate) OR (r.sessDate = selectedDate AND r.sessHour + r.duration <= selectedHour) OR  (r.sessDate = selectedDate AND selectedHour + selectedDuration <= r.sessHour)) THEN
+            roomId := r.roomId;
+            RETURN NEXT;
+        END IF;
+    END LOOP;
+    CLOSE CURS;
 END;
 $$ LANGUAGE plpgsql;
 
--- 9. get_available_rooms
+
+-- 9. get_available_rooms //done
 CREATE OR REPLACE FUNCTION get_available_rooms(IN startDate DATE, IN endDate DATE) 
-RETURNS TABLE (roomId INT, seatingCapacity INT, availDay DATE, hours INT[]) 
+RETURNS TABLE (roomId INT, seatingCapacity INT, selectedDay DATE, selectedHours INT[]) 
 AS $$
 
 DECLARE
 	curs CURSOR FOR (SELECT * FROM LectureRooms);
 	r RECORD;
 	availDay DATE;
-	hours INT[] := '{9,10,11,12,13,14,15,16,17}';
+	adjHours INT[] := '{9,10,11,12,13,14,15,16,17}';
 	counter INT;
-	selectedHr INT;
-	selectedDuration INT;
 	temprow RECORD;
 	
 BEGIN
@@ -224,35 +230,29 @@ BEGIN
 		EXIT WHEN NOT FOUND;
 		roomId := r.roomId;
 		seatingCapacity := r.seatingCapacity;
-		availDay := startDate;
+		availDay := (SELECT startDate - INTERVAL '1 day');
 		LOOP 
+			availDay := (SELECT availDay + INTERVAL '1 day');
 			IF availDay > endDate THEN EXIT;
 			END IF;
-			
-			IF EXISTS 
-			(SELECT 1 FROM CourseSessions cs
-			where cs.roomId = r.roomId AND cs.sessDate = availDay) THEN
+			selectedDay := availDay;
 			
 			FOR temprow IN
-				SELECT * FROM CourseSessions cs INNER JOIN Courses cr ON courseId
+				SELECT *
+				FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
 				where cs.roomId = r.roomId AND cs.sessDate = availDay
-				
+			LOOP 
+				counter := temprow.sessHour;
 				LOOP 
-					SELECT cs.sessHour, cr.duration INTO selectedHr, selectedDuration
-					FROM CourseSessions cs INNER JOIN Courses cr ON courseId
-					where cs.roomId = r.roomId AND cs.sessDate = availDay;
-					counter := selectedHr;
-					LOOP 
-						IF counter <= selectedHr + selectedDuration THEN
-							SELECT array_remove(hours, counter);
-							counter = counter + 1;
-						END IF;
-					END LOOP;
+					EXIT WHEN counter >= temprow.sessHour + temprow.duration;
+					adjHours := (SELECT array_remove(adjHours, counter));
+					counter := counter + 1;
 				END LOOP;
-			END IF;
+			END LOOP;
+			
+			selectedHours := adjHours;
 			RETURN NEXT;
-			availDay := (SELECT availDay + INTERVAL '1 day');
-			hours := '{9,10,11,12,13,14,15,16,17}';
+			adjHours := '{9,10,11,12,13,14,15,16,17}';
 		END LOOP;
 	END LOOP;
 	CLOSE curs;
@@ -326,21 +326,34 @@ END;
                                                  
 $$ LANGUAGE plpgsql;
 
--- 11. add_course_packages
+-- 11. add_course_packages //done
 CREATE OR REPLACE PROCEDURE add_course_package (packageName TEXT, numSessions INT, startDate DATE, endDate DATE, price MONEY)
 AS $$
 		INSERT INTO CoursePackages (price, startDate, endDate, numSessions, packageName)
 		VALUES (price, startDate, endDate, numSessions, packageName); 				 
 $$ LANGUAGE SQL; 
 
--- 12.get_available_course_pacakges
+-- 12.get_available_course_pacakages //done
 CREATE OR REPLACE FUNCTION get_available_course_packages ()
 RETURNS TABLE (packageName TEXT, numSessions INT, endDate DATE, price MONEY)
 AS $$
+DECLARE 
+    curs CURSOR FOR (SELECT * FROM CoursePackages);
+    r RECORD;
 BEGIN
-	SELECT cp.packageName, cp.numSessions, cp.endDate, cp.price
-	FROM CoursePackages cp
-	WHERE cp.startDate <= CURRENT_DATE AND cp.endDate >= CURRENT_DATE;
+    OPEN curs;
+    LOOP
+        FETCH curs INTO r;
+        EXIT WHEN NOT FOUND;
+        IF (r.startDate <= CURRENT_DATE AND r.endDate >= CURRENT_DATE) THEN
+            packageName := r.packageName;
+            numSessions := r.numSessions;
+            endDate := r.endDate;
+            price := r.price;
+            RETURN NEXT;
+        END IF;
+    END LOOP;
+    CLOSE curs;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1509,7 +1522,7 @@ DECLARE
 	
 BEGIN
 	SELECT NEW.startDate - INTERVAL '10 days' INTO calDate;
-	If (calDate > NEW.registrationDeadline) THEN
+	If (calDate < NEW.registrationDeadline) THEN
 		RAISE NOTICE 'Registration deadline should be 10 days before start date. Amendments made.';
 		NEW.registrationDeadline := calDate;
 	END IF;
