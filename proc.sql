@@ -1153,7 +1153,7 @@ BEGIN
                 where customerId = _customerId and purchaseDate = _purchaseDate and packageId = _packageId;
                 
                 insert into Cancels (customerId, courseId, offeringId, sessDate, sessHour, cancellationTimestamp, paymentMode, isEarlyCancellation, refundAmt)
-                values (_customerId, _courseId, _offeringId, _courseSessionDate, _courseSessionHour, CURRENT_TIMESTAMP, 'redeems', _isEarlyCancellation, courseFee * 0.9);
+                values (_customerId, _courseId, _offeringId, _courseSessionDate, _courseSessionHour, CURRENT_TIMESTAMP, 'redeems', _isEarlyCancellation, null);
             ELSE 
                 insert into Cancels (customerId, courseId, offeringId, sessDate, sessHour, cancellationTimestamp, paymentMode, isEarlyCancellation, refundAmt)
                 values (_customerId, _courseId, _offeringId, _courseSessionDate, _courseSessionHour, CURRENT_TIMESTAMP, 'redeems', FALSE, null);
@@ -1167,10 +1167,10 @@ BEGIN
             IF _isEarlyCancellation = TRUE THEN
                 select courseFee into _courseFee from CourseOfferings where courseId = _courseId and offeringId = _offeringId;
 
-                insert into Cancels (customerId, courseId, offeringId, sessDate, sessHour, cancellationDateTime, paymentMode, isEarlyCancellation, refundAmt)
-                values (_customerId, _courseId, _offeringId, _courseSessionDate, _courseSessionHour, CURRENT_TIMESTAMP, 'pays', TRUE, courseFee * 0.9);
+                insert into Cancels (customerId, courseId, offeringId, sessDate, sessHour, cancellationTimestamp, paymentMode, isEarlyCancellation, refundAmt)
+                values (_customerId, _courseId, _offeringId, _courseSessionDate, _courseSessionHour, CURRENT_TIMESTAMP, 'pays', TRUE, _courseFee * 0.9);
             ELSE 
-                insert into Cancels (customerId, courseId, offeringId, sessDate, sessHour, cancellationDateTime, paymentMode, isEarlyCancellation, refundAmt)
+                insert into Cancels (customerId, courseId, offeringId, sessDate, sessHour, cancellationTimestamp, paymentMode, isEarlyCancellation, refundAmt)
                 values (_customerId, _courseId, _offeringId, _courseSessionDate, _courseSessionHour, CURRENT_TIMESTAMP, 'pays', FALSE, null);
             END IF;
         END IF;

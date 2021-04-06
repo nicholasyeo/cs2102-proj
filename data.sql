@@ -221,6 +221,25 @@ call register_session(14, 3, 1, date '2021-07-15', 15,  0);
 call register_session(15, 7, 2, date '2021-07-12', 15,  0);
 call register_session(15, 5, 1, date '2021-07-22', 15,  0);
 
+-- To be cancelled (Pays)
+call register_session(13, 4, 1, date '2021-07-16', 15,  0);
+call register_session(13, 3, 1, date '2021-07-15', 15,  0);
+
+call register_session(14, 2, 2, date '2023-02-02', 10, 0);
+call register_session(14, 6, 2, date '2021-07-16', 14, 0);
+
+call register_session(15, 1, 1, date '2021-07-01', 10, 0);
+call register_session(15, 2, 3, date '2023-02-03', 10, 0);
+
+------------------------------- Cancel Registration for Pays ----------------------------
+call cancel_registration(13, 4, 1);
+call cancel_registration(13, 3, 1);
+
+call cancel_registration(14, 2, 2);
+call cancel_registration(14, 6, 2);
+
+call cancel_registration(15, 1, 1);
+call cancel_registration(15, 2, 3);
 
 -- Redeems
 
@@ -244,6 +263,23 @@ call register_session(7, 3, 1, date '2021-07-15', 15, 1);
 
 
 call register_session(4, 7, 2, date '2021-07-12', 15, 1);
+
+-- To be cancelled (Redeems)
+call register_session(1, 5, 1, date '2021-07-22', 15, 1);
+
+call register_session(7, 2, 3, date '2023-02-03', 10, 1);
+call register_session(7, 7, 2, date '2021-07-12', 15, 1);
+
+
+call register_session(1, 6, 2, date '2021-07-16', 14, 1);
+
+------------------------------ Cancel Registration for Redeems ----------------------------
+call cancel_registration(1, 5, 1);
+
+call cancel_registration(7, 2, 3);
+call cancel_registration(7, 7, 2);
+
+call cancel_registration(1, 6, 2);
 
 -- register for recent sessions to test inactive package in PurchasesView
 -- call register_session(11, 2, 4, date '2021-04-09', 15, 1);
