@@ -265,7 +265,7 @@ create or replace view CourseAttendance (courseId, totalAttendance) as
 	group by courseId;
 
 
-create view CountRegistrations(offeringId, totalRegistration) AS
+create or replace view CountRegistrations(offeringId, totalRegistration) AS
     select offeringId, count(*) as totalRegistration
     FROM CourseOfferings NATURAL JOIN Redeems NATURAL JOIN Pays
     GROUP BY offeringId;

@@ -39,16 +39,17 @@ call add_customer('Uman', 'Tampines', 80000020, 'uman@gmail.com', '0000 0000 000
 call update_credit_card(10, '0000 0000 0000 0090', date '2025-01-01', '0000');
 
 ----------------------------- CALLS TO ADD COURSES -----------------------------
-call add_course('Introduction to Artificial Intelligence', 'Search, knowledge representation, decision making', 'Artificial Intelligence', 2);
-call add_course('Machine Learning', 'Decision Trees, Neural Networks, Bayesian Inference', 'Artificial Intelligence', 3);
-call add_course('AI Planning & Decision Making', 'Planning, Uncertainty, MDP, Game Theory', 'Artificial Intelligence', 2);
+call add_course('Introduction to Artificial Intelligence', 'Search, knowledge representation, decision making', 'Artificial Intelligence', 1);
+call add_course('Machine Learning', 'Decision Trees, Neural Networks, Bayesian Inference', 'Artificial Intelligence', 2);
+call add_course('AI Planning & Decision Making', 'Planning, Uncertainty, MDP, Game Theory', 'Artificial Intelligence', 1);
 call add_course('Knowledge Representation', 'Knowledge, Logic, FOL', 'Artificial Intelligence', 2);
 call add_course('Software Engineering', 'OOP, UML, Code quality, Design patterns', 'Software Engineering', 2);
-call add_course('Data Structures & Algorithms', 'Searching, Sorting, Hashing, Trees, Graphs, SSSP, MST', 'Algorithms', 2);
-call add_course('Design & Analysis of Algorithms', 'Master theorem, Greedy algorithms, Dynamic Programming', 'Algorithms', 2);
+call add_course('Data Structures & Algorithms', 'Searching, Sorting, Hashing, Trees, Graphs, SSSP, MST', 'Algorithms', 1);
+call add_course('Design & Analysis of Algorithms', 'Master theorem, Greedy algorithms, Dynamic Programming', 'Algorithms', 1);
 call add_course('Introduction to Computer Networks', 'Application, Transport, Network, Link, Physical layers', 'Network', 3);
 call add_course('Introduction to Information Security', 'Classical/historical ciphers, Modern ciphers, Cryptosystems', 'Security', 2);
 call add_course('Database Systems', 'Relational Algebra, SQL, ER, Normal Forms', 'Database', 2);
+
 call add_course('Outdated Course', 'Teaches outdated material', 'Artificial Intelligence', 2);
 call add_course('Outdated Course1', 'Teaches outdated material', 'Database', 2);
 call add_course('Outdated Course2', 'Teaches outdated material', 'Algorithms', 2);
@@ -93,6 +94,14 @@ INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
 VALUES (40, 5, 3);
 INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor)
 VALUES (50, 5, 1);
+
+
+---------------------------- CALLS TO INSERT COURSE OFFERINGS -------------------------
+-- add_course_offering (IN offeringId INT, IN courseId INT, IN courseFee MONEY, IN launchDate DATE, 
+--						IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, 
+--						IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
+
+--call add_course_offering (3,2,120::MONEY, '2021-04-20'::DATE, '2021-05-21'::DATE, 3, 100, ARRAY['2021-07-27', '2021-07-28'::DATE], ARRAY[9,9], ARRAY[6,6]);
 
 ----------------------------- MANUALLY ADD CourseOfferings  -----------------------------
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
