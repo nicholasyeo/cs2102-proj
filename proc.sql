@@ -117,75 +117,95 @@ create or replace procedure add_course(cTitle text, cDescription text,
     values (cDescription, duration, cTitle, cArea);
 $$ language sql;
 
--- 7. get_available_instructors
-CREATE OR REPLACE FUNCTION get_available_instructors(IN courseId INT, IN startDate DATE, IN endDate DATE) 
-RETURNS TABLE (employeeId INT, instructorName TEXT, totalHours INT, availDay DATE, hours INT[]) 
+-- 7. get_available_instructors //done
+CREATE OR REPLACE FUNCTION get_available_instructors(IN course INT, IN startDate DATE, IN endDate DATE) 
+RETURNS TABLE (employeeId INT, instructorName TEXT, monthlyHours INT, selectedDay DATE, selectedHours INT[]) 
 AS $$
 
 DECLARE 
-	area TEXT; --:= (SELECT cr.areaName FROM Courses AS cr WHERE cr.courseId = courseId);
-	curs CURSOR FOR (SELECT * FROM Specialises s WHERE s.areaName = area ORDER BY employeeId ASC);
+	area TEXT;
+	curs CURSOR FOR (SELECT * FROM Specialises s INNER JOIN Employees e ON s.employeeId = e.employeeId ORDER BY s.employeeId ASC);
 	r RECORD;
 	getMonth INT;
-	totalHours INT;
 	availDay DATE;
-	hours INT[] := '{9,10,11,14,15,16,17}';
+	adjHours INT[] := '{9,10,11,14,15,16,17}';
 	counter INT;
 	selectedHr INT;
 	selectedDuration INT;
 	temprow RECORD;
+	totalHours INT;
 
 BEGIN
-
-	SELECT EXTRACT(MONTH FROM startDate) INTO getMonth;
+	area := (SELECT cr.areaName FROM Courses cr WHERE cr.courseId = course);
+	
+	getMonth := (SELECT EXTRACT(MONTH FROM startDate));
 
 	OPEN curs;
 	LOOP	
 		FETCH curs INTO r;
 		EXIT WHEN NOT FOUND;
-		employeeId := r.employeeId;
-		instructorName := r.ename;
 		
-		SELECT SUM(duration) INTO totalHours 
-		FROM CourseSessions INNER JOIN Courses ON courseId
-		WHERE employeeId = r.employeeId AND EXTRACT(MONTH FROM sessDate) = getMonth;
-		
-		availDay := startDate;
-		
-		LOOP 
-			IF availDay > endDate THEN EXIT;
-			END IF;
+		IF (r.areaName = area) THEN
+			employeeId := r.employeeId;
+			instructorName := r.ename;
+
+			SELECT SUM(duration) INTO totalHours 
+			FROM CourseSessions cs INNER JOIN Courses cr ON cr.courseId = cs.courseId
+			WHERE cs.employeeId = r.employeeId AND EXTRACT(MONTH FROM cs.sessDate) = getMonth;
 			
-			IF EXISTS 
-			(SELECT 1 FROM CourseSessions
-			WHERE employeeId = r.employeeId AND sessDate = availDay) THEN
+			monthlyHours := coalesce(totalHours, 0);
 			
-			FOR temprow IN
-				SELECT * FROM CourseSessions 
-				WHERE employeeId = r.employeeId AND sessDate = availDay
-				
+			availDay := (SELECT startDate - INTERVAL '1 day');
+
+			LOOP 
+				availDay := (SELECT availDay + INTERVAL '1 day');
+				IF availDay > endDate THEN EXIT;
+				END IF;
+				selectedDay := availDay;
+
+				FOR temprow IN
+					SELECT * 
+					FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
+					where cs.employeeId = r.employeeId AND cs.sessDate = availDay
 				LOOP 
-					SELECT cs.sessHour, cr.duration INTO selectedHr, selectedDuration
-					FROM CourseSessions cs INNER JOIN Courses cr ON courseId
-					where cs.employeeId = r.employeeId AND cs.sessDate = availDay;
-					counter := selectedHr-1;
+					counter := temprow.sessHour - 1;
 					LOOP 
-						IF counter <= selectedHr + selectedDuration + 1 THEN
-							SELECT array_remove(hours, counter);
-							counter = counter + 1;
-						END IF;
+						EXIT WHEN counter >= temprow.sessHour + temprow.duration + 1;
+						adjHours := (SELECT array_remove(adjHours, counter));
+						counter := counter + 1;
 					END LOOP;
 				END LOOP;
-			END IF;
-			RETURN NEXT;
-			availDay := (SELECT availDay + INTERVAL '1 day');
-			hours := '{9,10,11,14,15,16,17}';
-		END LOOP;
+				selectedHours := adjHours;
+				RETURN NEXT;
+				adjHours := '{9,10,11,14,15,16,17}';
+			END LOOP;
+		END IF;
 		
 	END LOOP;
 	CLOSE curs;	
 END;
 
+$$ LANGUAGE plpgsql;
+
+-- 8. find_rooms //done
+CREATE OR REPLACE FUNCTION find_rooms(IN selectedDate DATE, IN selectedHour INT, IN selectedDuration INT) 
+RETURNS TABLE (roomId INT) 
+AS $$
+DECLARE 
+    curs CURSOR FOR (SELECT * FROM LectureRooms lr LEFT JOIN (CourseSessions cs INNER JOIN Courses cr on cr.courseId = cs.courseId) ON lr.roomId = cs.roomId);
+    r RECORD;
+BEGIN
+    OPEN curs;
+    LOOP
+        FETCH curs INTO r;
+        EXIT WHEN NOT FOUND;
+        IF ((r.sessDate IS NULL) OR (r.sessDate <> selectedDate) OR (r.sessDate = selectedDate AND r.sessHour + r.duration <= selectedHour) OR  (r.sessDate = selectedDate AND selectedHour + selectedDuration <= r.sessHour)) THEN
+            roomId := r.roomId;
+            RETURN NEXT;
+        END IF;
+    END LOOP;
+    CLOSE CURS;
+END;
 $$ LANGUAGE plpgsql;
 
 -- 8. find_rooms //done
@@ -267,10 +287,10 @@ AS $$
 DECLARE
 	counter INT;
 	countCapacity INT;
-	selectedDate DATE;
-	selectedStartHr INT;
-	selectedRoomId INT;
-	selectedInstructorId INT;
+	addDate DATE;
+	addStartHr INT;
+	addRoomId INT;
+	addInstructorId INT;
 	tempCap INT;
 	getDay INT;
 	
@@ -278,50 +298,50 @@ BEGIN
 	
 	counter := 1;
 	countCapacity := 0;
-	selectedDate := sessionDate[counter];
+	addDate := sessionDate[counter];
 	
 	LOOP 
 		IF sessionDate[counter] IS NULL THEN EXIT;
 		END IF;
 		
-		selectedDate := sessionDate[counter];
-		selectedStartHr := sessionStartHr[counter];
-		selectedRoomId := roomId[counter];
+		addDate := sessionDate[counter];
+		addStartHr := sessionStartHr[counter];
+		addRoomId := roomId[counter];
 
-		SELECT I.employeeId INTO selectedInstructorId
-		FROM get_available_instructors(courseId, selectedDate, selectedDate) AS I
-		WHERE I.availDay = selectedDate AND selectedStartHr = ANY (I.hours)
+		SELECT I.employeeId INTO addInstructorId
+		FROM get_available_instructors(courseId, addDate, addDate) AS I
+		WHERE I.selectedDay = addDate AND addStartHr = ANY (I.selectedHours)
 		LIMIT 1;
 		
-		SELECT R.roomId, R.seatingCapacity INTO selectedRoomId, tempCap
-		FROM get_available_rooms(selectedDate, selectedDate) AS R
-		WHERE R.availDay = selectedDate AND selectedStartHr = ANY (R.hours)
+		SELECT R.roomId, R.seatingCapacity INTO addRoomId, tempCap
+		FROM get_available_rooms(addDate, addDate) AS R
+		WHERE R.selectedDay = addDate AND addStartHr = ANY (R.selectedHours)
 		LIMIT 1;
 
-		IF (selectedInstructorId IS NOT NULL AND selectedRoomId IS NULL) THEN
+		IF (addInstructorId IS NOT NULL AND addRoomId IS NOT NULL) THEN
 			IF (counter = 1) THEN 
 				INSERT INTO CourseOfferings (courseId, launchDate, offeringId, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
 				VALUES (courseId, launchDate, offeringId, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
 			END IF;
-			--PERFORM add_session(offeringId, counter+1, selectedDate, selectedStartHr, selectedInstructorId, selectedRoomId);
-			SELECT EXTRACT(DAY FROM selectedDate) INTO getDay;
+			SELECT EXTRACT(DOW FROM addDate) INTO getDay;
 			INSERT INTO CourseSessions(offeringId, launchDate, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
-			VALUES(offeringId, launchDate, counter, selectedDate, selectedStartHr, selectedInstructorId, selectedRoomId,courseId, getDay); 
+			VALUES(offeringId, launchDate, counter, addDate, addStartHr, addInstructorId, addRoomId,courseId, getDay); 
 			
 			countCapacity := countCapacity + tempCap;
 
-			IF (countCapacity < numTarget) THEN 
-				RAISE NOTICE 'Current seating capacity of Course Offering is less than target number of registration!';
-			END IF;
 		ELSE 
 			RAISE NOTICE 'Unable to find instructors or rooms! Course offering addition aborted.';
+			ROLLBACK;
 			EXIT;
 		END IF;
 		
 		COUNTER := COUNTER + 1;
 		
 	END LOOP;
-		
+    
+    IF (countCapacity < numTarget) THEN 
+        RAISE NOTICE 'Current seating capacity of Course Offering is less than target number of registration!';
+    END IF;		
 END;		
                                                  
 $$ LANGUAGE plpgsql;
@@ -1455,7 +1475,6 @@ CREATE TRIGGER offering_dates_trigger
 AFTER INSERT OR UPDATE OR DELETE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION offering_dates_func();
 
-/*
 -- Trigger to update seating capacity od course offering and the sessions
 
 CREATE OR REPLACE FUNCTION update_seatingcapacity_func() RETURNS TRIGGER 
@@ -1464,43 +1483,58 @@ DECLARE
 	newSeats INT;
 	oldSeats INT;
 	calSeats INT;
+	currSeats INT;
 	currReg INT;
 BEGIN
 
-	SELECT seatingCapacity INTO newSeats
-	FROM CourseSessions INNER JOIN LectureRooms ON roomId
-	WHERE courseId = NEW.courseId;
+	SELECT lr.seatingCapacity INTO newSeats
+	FROM CourseSessions cs INNER JOIN LectureRooms lr ON cs.roomId = lr.roomId
+	WHERE cs.courseId = NEW.courseId;
 	
-	SELECT seatingCapacity INTO oldSeats
-	FROM CourseSessions INNER JOIN LectureRooms ON roomId
-	WHERE courseId = OLD.courseId;
+	SELECT lr.seatingCapacity INTO oldSeats
+	FROM CourseSessions cs INNER JOIN LectureRooms lr ON cs.roomId = lr.roomId
+	WHERE cs.courseId = OLD.courseId;
 	
-	SELECT totalRegistation INTO currReg
-	FROM CountRegistrations
-	WHERE offeringId = NEW.offeringId;
+ 
+	
+	SELECT totalRegistration INTO currReg
+	FROM CountRegistrations r
+	WHERE r.offeringId = NEW.offeringId;
 		
 	IF (TG_OP = 'INSERT') THEN 
-		calSeats := seatingCapacity + newSeats;
-		UPDATE CourseOfferings 
+		SELECT seatingCapacity INTO currSeats
+		FROM CourseOfferings co
+		WHERE co.offeringId = NEW.offeringId;
+		
+		calSeats := currSeats + newSeats;
+		UPDATE CourseOfferings co
 		SET seatingCapacity = calSeats
-		WHERE couseId = NEW.courseId;
+		WHERE co.courseId = NEW.courseId;
 	ELSEIF (TG_OP = 'UPDATE') THEN 
-		calSeats := seatingCapacity - oldSeats + newSeats;
+		SELECT seatingCapacity INTO currSeats
+		FROM CourseOfferings co
+		WHERE co.offeringId = NEW.offeringId;
+		
+		calSeats := currSeats - oldSeats + newSeats;
 		IF (calSeats < currReg) THEN 
 			RAISE EXCEPTION 'Unable to update Course Sessions as number of registrations is more than seating capacity of Course Offering.';
 			RETURN NULL;
 		END IF;
-		UPDATE CourseOfferings 
+		UPDATE CourseOfferings co
 		SET seatingCapacity = calSeats
-		WHERE couseId = NEW.courseId;	
+		WHERE co.couseId = NEW.courseId;	
 	ELSEIF (TG_OP='DELETE') THEN
-		calSeats := seatingCapacity - oldSeats;
+		SELECT seatingCapacity INTO currSeats
+		FROM CourseOfferings co
+		WHERE co.offeringId = OLD.offeringId;
+		
+		calSeats := currSeats - oldSeats;
 		IF (calSeats < currReg) THEN 
 			RAISE EXCEPTION 'Unable to delete Course Sessions as number of registrations is more than seating capacity of Course Offering.';
 			RETURN NULL;
 		END IF;
-		UPDATE CourseOfferings
-		SET seatingCapacity = calSeats
+		UPDATE CourseOfferings co
+		SET co.seatingCapacity = calSeats
 		WHERE couseId = OLD.courseId;	
 	END IF;
 	RETURN NEW;
@@ -1512,7 +1546,6 @@ CREATE TRIGGER update_seatingcapacity_trigger
 AFTER INSERT OR UPDATE OR DELETE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION update_seatingcapacity_func();
 
-*/
 -- Trigger to ensure registration deadline is 10 days before start date
 
 CREATE OR REPLACE FUNCTION regDeadline_offering_func() RETURNS TRIGGER 
@@ -1534,7 +1567,6 @@ CREATE TRIGGER regDeadline_offering_trigger
 BEFORE INSERT OR UPDATE ON CourseOfferings 
 FOR EACH ROW EXECUTE FUNCTION regDeadline_offering_func();
 
-/*
 ---CREATE TRIGGER FOR PART TIMER INSTRUCTOR 30 HR
 CREATE OR REPLACE FUNCTION parttimers_hours_func() RETURNS TRIGGER
 AS $$
@@ -1546,36 +1578,33 @@ DECLARE
 	selectedYear INT;
 	
 BEGIN
-	SELECT 1 FROM PartTimers WHERE employeeId = NEW.employeeId;
+	SELECT 1 FROM PartTimers pt WHERE pt.employeeId = NEW.employeeId;
 	
 	IF FOUND THEN 
 		selectedMonth := EXTRACT(MONTH FROM NEW.sessDate);
 		selectedYear := EXTRACT(YEAR FROM NEW.sessDate);
 
 		SELECT SUM(duration) INTO totalHrs
-		FROM Courses cr
-		INNER JOIN CourseSessions s ON courseId
+		FROM Courses cr INNER JOIN CourseSessions s ON cr.courseId = s.courseId
 		WHERE s.employeeId = NEW.employeeId AND selectedMonth = EXTRACT(MONTH FROM s.sessDate)
 		AND selectedYear = EXTRACT(YEAR FROM s.sessDate);
 		
-		SELECT hours INTO newHrs
-		FROM Courses cr 
-		INNER JOIN CourseSessions s ON courseId
+		SELECT duration INTO newHrs
+		FROM Courses cr INNER JOIN CourseSessions s ON cr.courseId = s.courseId
 		WHERE s.courseId = NEW.courseId;
 		
 		IF (TG_OP = 'INSERT') THEN 
 			IF (totalHrs + newHrs > 30) THEN 
-				RAISE EXCEPTION 'Part Timer working hours exceed 30 hours this month!';
+				RAISE EXCEPTION 'Part Timer working hours will exceed 30 hours this month!';
 				RETURN NULL;
 			END IF;
 			
 		ELSIF (TG_OP = 'UPDATE') THEN
-			SELECT hours INTO oldhrs
-			FROM Courses cr 
-			INNER JOIN CourseSessions s ON courseId
+			SELECT duration INTO oldhrs
+			FROM Courses cr INNER JOIN CourseSessions s ON cr.courseId = s.courseId
 			WHERE s.courseId = OLD.courseId;
 			
-			IF (totalHrs -oldHrs + newHrs > 30) THEN 
+			IF (totalHrs - oldHrs + newHrs > 30) THEN 
 				RAISE EXCEPTION 'Part Timer working hours exceed 30 hours this month!';
 				RETURN NULL;
 			END IF;
@@ -1591,9 +1620,8 @@ CREATE TRIGGER parttimers_hours_tigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION parttimers_hours_func();
 
-*/
 
-/*
+
 -- Trigger for instructor teaching hours availability +- 1hr
 
 CREATE OR REPLACE FUNCTION check_instructor_hours_func() RETURNS TRIGGER 
@@ -1608,14 +1636,14 @@ DECLARE
 BEGIN
 	selectedDate := NEW.sessDate;
 	startHr := NEW.sessHour;
-	SELECT duration INTO teachingDuration
-	FROM CourseSessions INNER JOIN Courses ON courseId
-	WHERE courseId = NEW.courseId;
-	SELECT startHr + INTERVAL '1h' * teachingDuration INTO endHr;
+	SELECT cs.duration INTO teachingDuration
+	FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
+	WHERE cr.courseId = NEW.courseId;
+	endHr := startHr + teachingDuration;
 	counter := startHr - 1;
 	LOOP
-		IF EXISTS (SELECT 1 FROM CourseSessions WHERE employeeId = NEW.employeeId 
-						   AND sessDate = NEW.sessDate AND sessHR = counter) THEN 
+		IF EXISTS (SELECT 1 FROM CourseSessions cs WHERE cs.employeeId = NEW.employeeId 
+						   AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
 			RAISE EXCEPTION 'Instructor unavailable';
 			RETURN NULL;
 		END IF;
@@ -1632,8 +1660,7 @@ CREATE TRIGGER instructor_hours_trigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION check_instructor_hours_func();
 
-*/
-/*
+
 -- Trigger to check session timings
 CREATE OR REPLACE FUNCTION check_sessiontimings_func() RETURNS TRIGGER
 AS $$
@@ -1644,10 +1671,10 @@ DECLARE
 	counter INT;
 BEGIN
 	startTime := NEW.sessHour;
-	SELECT duration INTO teachingDuration
-	FROM CourseSessions INNER JOIN Courses ON courseId
-	WHERE courseId = NEW.courseId;
-	SELECT startTime + INTERVAL '1h' * teachingDuration INTO endTime;
+	SELECT cr.duration INTO teachingDuration
+	FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
+	WHERE cs.courseId = NEW.courseId;
+	endTime := startTime + teachingDuration;
 	counter := startTime;
 	LOOP
 		IF (counter < 9 OR counter = 12 OR counter = 13 OR counter > 18) THEN 
@@ -1667,10 +1694,8 @@ CREATE TRIGGER check_sessiontimings_trigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION check_sessiontimings_func();
 
-*/
 -- Trigger to check that lecture room holds 1 session at a time
 
-/*
 CREATE OR REPLACE FUNCTION check_room_hours_func() RETURNS TRIGGER 
 AS $$
 DECLARE
@@ -1683,14 +1708,14 @@ DECLARE
 BEGIN
 	selectedDate := NEW.sessDate;
 	startHr := NEW.sessHour;
-	SELECT duration INTO teachingDuration
-	FROM CourseSessions INNER JOIN Courses ON courseId
-	WHERE courseId = NEW.courseId;
-	SELECT startHr + INTERVAL '1h' * teachingDuration INTO endHr;
+	SELECT cs.duration INTO teachingDuration
+	FROM CourseSessions cs INNER JOIN Courses cr ON cs.courseId = cr.courseId
+	WHERE cs.courseId = NEW.courseId;
+	endHr := startHr + teachingDuration;
 	counter := startHr;
 	LOOP
-		IF EXISTS (SELECT 1 FROM LectureRooms INNER JOIN CourseSessions ON roomId WHERE roomId = NEW.roomId 
-					AND sessDate = NEW.sessDate AND sessHR = counter) THEN 
+		IF EXISTS (SELECT 1 FROM LectureRooms lr INNER JOIN CourseSessions cs ON lr.roomId = cs.roomId WHERE lr.roomId = NEW.roomId 
+					AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
 			RAISE EXCEPTION 'Lecture room unavailable.';
 			RETURN NULL;
 		END IF;
@@ -1707,7 +1732,6 @@ CREATE TRIGGER room_hours_trigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION check_room_hours_func();
 
-*/
 -- Trigger to take care of offering id sequence
 
 CREATE OR REPLACE FUNCTION set_offeringId_func() RETURNS TRIGGER
