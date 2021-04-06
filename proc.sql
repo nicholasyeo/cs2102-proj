@@ -895,29 +895,30 @@ create or replace function view_manager_report()
 returns table (
     manager_name text,
     num_managed_courses int,
-    num_ending int,
+    offering_ending_this_year int,
     net_registration_fee money,
     highest_course_title text[]
 ) as $$
 declare
     cur cursor for (
-        select employeeId, employeeName
-        from Managers
-        order by employeeName asc
+        select employeeId, eName
+        from Managers natural join Employees
+        order by eName asc
     );
 
     r record;
     managedAreas text[];
     courseArr int[];
     offeringArr int[];
-    i int;
+    i text;
     m int;
     n int;
-    coursePrice money;
     ccPayment money;
     redemptionPayment money;
+	totalAmount money;
     highestYet money;
     top_performing_courses text[];
+	enrollment int;
 begin
     
     open cur;
@@ -929,72 +930,78 @@ begin
         ccPayment = 0.00;
         redemptionPayment = 0.00;
         highestYet = 0;
-        top_performing_courses = array[];
+		num_managed_courses := 0;
+		manager_name := r.eName;
+		offering_ending_this_year = 0;
+		
         -- Array of areas managed by manager X
         managedAreas = array(
             select areaName
             from CourseAreas ca
             where ca.employeeId = r.employeeId
         );
-        num_managed_courses := array_length(managedAreas);
         -- For each of the areas managed, loop
         foreach i in array managedAreas
         loop
-            
             -- Array of courses corresponding to course area Y, managed by manager X
             courseArr = array (
                 select courseId
                 from Courses c
-                where c.courseArea = managedAreas[i]
+                where c.areaName = i
             );
-
             -- loop over every course of course area Y that is managed by manager X
             foreach m in array courseArr
             loop
+				num_managed_courses := num_managed_courses + 1;
                 offeringArr = array (
                     select offeringId
                     from CourseOfferings co
-                    where co.courseId = courseArr[m] and extract(year from co.endDate) = extract(year from current_date) 
+                    where co.courseId = m and extract(year from co.endDate) = extract(year from current_date) 
                 );
 
-                num_ending := num_ending + array_length(offeringArr);
-
+                
                 -- loop over every offering of course Z of course area Y that is managed by manager X
                 foreach n in array offeringArr
                 loop
-                    ccPayment = (
-                        select courseFee
+					offering_ending_this_year := offering_ending_this_year + 1;
+					
+					select numEnrolled into enrollment
+					from PayAttendance oa
+					where oa.courseId = m and oa.offeringId = n;
+                        
+                    ccPayment = coalesce((
+                        select courseFee * enrollment
                         from CourseOfferings co1
-                        where co1.courseId = courseArr[m] and co1.offeringId = offeringArr[n]
-                        ) * (
-                            select numEnrolled
-                            from PayAttendance oa
-                            where oa.courseId = courseArr[m] and oa.offeringId = offeringArr[n]
-                        );
+                        where co1.courseId = m and co1.offeringId = n
+                        ), 0.00::money);
 
-                    redemptionPayment = (
-                        select floor(price/numSessions)
-                        from (Redeems natural join Packages) as rp
-                        where rp.courseId = courseArr[m] and rp.offeringId = offeringArr[n]
-                    );
-
-                    if ccPayment + redemptionPayment > highestYet then
-                        highestYet = ccPayment + redemptionPayment;
+                    redemptionPayment = coalesce((
+                        select sum(price/numSessions)
+                        from (Redeems natural join CoursePackages) as rp
+                        where rp.courseId = m and rp.offeringId = n
+                    ), 0.00::money);
+					
+					totalAmount := ccPayment + redemptionPayment;
+					net_registration_fee := net_registration_fee + totalAmount;
+                    if totalAmount > highestYet then
+                        highestYet = totalAmount;
                         top_performing_courses = array(
-                            select courseName
+                            select coursetitle
                             from Courses c1
-                            where c1.courseId = courseArr[m]
+                            where c1.courseId = m
                         );
-                    elseif ccPayment + redemptionPayment = highestYet then
+                    elseif totalAmount = highestYet then
                         top_performing_courses = array_append(top_performing_courses, (
-                            select courseName
+                            select courseTitle
                             from Courses c1
-                            where c1.courseId = courseArr[m]
+                            where c1.courseId = m
                         ));
                     end if;
                 end loop;
             end loop;
         end loop;
+		highest_course_title := top_performing_courses;
+		return next;
     end loop;
     close cur;
 end;
@@ -1806,6 +1813,8 @@ declare
 BEGIN
     if NEW.customerId not in (select customerId from Customers) then
         raise exception 'Customer does not exist';
+	elseif (select courseId from Courses where new.courseId = courseId) is null then
+		raise exception 'Course does not exist';
     elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
         raise exception 'CourseOffering does not exist';
     elseif not(row(NEW.courseSessionDate, new.courseSessionHour) in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId)) then
@@ -1835,6 +1844,8 @@ declare
 BEGIN
     if NEW.customerId not in (select customerId from Customers) then
         raise exception 'Customer does not exist';
+	elseif (select courseId from Courses where new.courseId = courseId) is null then
+		raise exception 'Course does not exist';
     elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
         raise exception 'CourseOffering does not exist';
     elseif not(row(NEW.courseSessionDate, new.courseSessionHour) in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId)) then

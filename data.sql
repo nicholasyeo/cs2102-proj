@@ -53,6 +53,8 @@ call add_course('Outdated Course', 'Teaches outdated material', 'Artificial Inte
 call add_course('Outdated Course1', 'Teaches outdated material', 'Database', 2);
 call add_course('Outdated Course2', 'Teaches outdated material', 'Algorithms', 2);
 call add_course('Outdated Course3', 'Teaches outdated material', 'Network', 2);
+call add_course('Parallel Networks', 'Parallel networking between computers', 'Network', 3);
+
 ---------------------------- CALLS TO ADD COURSE PACKAGES ----------------------------
 
 -- Expired packages
@@ -95,27 +97,27 @@ VALUES (50, 5, 1);
 ----------------------------- MANUALLY ADD CourseOfferings  -----------------------------
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-15', 'available', 100 , '2021-07-01', '2021-07-20', 1, 2);
+	values (1, '2021-01-01', 50, 100, '2021-06-16', 'available', 100 , '2021-07-01', '2021-07-20', 1, 2);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-15', 'available', 125 , '2021-07-02', '2021-07-20', 3, 2);
+	values (1, '2021-01-01', 50, 100, '2021-06-17', 'available', 125 , '2021-07-02', '2021-07-20', 3, 2);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-15', 'available', 150 , '2021-07-03', '2021-07-20', 4, 2);
+	values (1, '2021-01-01', 50, 100, '2021-06-18', 'available', 150 , '2021-07-03', '2021-07-20', 4, 2);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-15', 'available', 200 , '2021-07-04', '2021-07-20', 5, 2);
+	values (1, '2021-01-01', 50, 100, '2021-06-18', 'available', 200 , '2021-07-04', '2021-07-20', 5, 2);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (2, '2021-02-01', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
+	values (2, '2021-02-01', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (2, '2021-02-01', 100, 99, '2021-06-15', 'available', 170 , '2021-07-02', '2021-07-20', 6, 3);
+	values (2, '2021-02-01', 100, 99, '2021-06-16', 'available', 170 , '2021-07-02', '2021-07-20', 6, 3);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
@@ -127,15 +129,19 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 10, 3);
+	values (1, '2021-02-02', 100, 99, '2021-06-17', 'available', 150 , '2021-07-01', '2021-07-20', 10, 3);
 
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 8, 3);
+	values (1, '2021-02-02', 100, 99, '2021-06-18', 'available', 150 , '2021-07-01', '2021-07-20', 8, 3);
 	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 7, 3);
+	values (1, '2021-02-02', 100, 99, '2021-06-19', 'available', 150 , '2021-07-01', '2021-07-20', 15, 3);
+	
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (1, '2021-02-02', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 7, 3);
 	
 -- more recent offerings
 -- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
@@ -175,7 +181,9 @@ call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 15, 2, 9, 5);
 call add_session(7, date '2021-02-01', 2, 5, date '2021-07-12', 15, 1, 9, 2);
 call add_session(10, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
 call add_session(8, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
-call add_session(7, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
+call add_session(7, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2);
+
+call add_session(15, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
 
 -- more recent sessions to test PurchasesView inactive package
 -- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 15, 1, 9, 2); 
@@ -272,9 +280,10 @@ call register_session(6, 2, 3, date '2023-02-03', 10, 1);
 call register_session(7, 5, 1, date '2021-07-22', 15, 1);
 call register_session(7, 3, 1, date '2021-07-15', 15, 1);
 
-
 call register_session(4, 7, 2, date '2021-07-12', 15, 1);
 
+call register_session(8, 15, 1, date '2021-07-12', 15, 0);
+call register_session(9, 8, 1, date '2021-07-12', 15, 1);
 
 -- Customer 8 and 9 will register for outdated sessions for promote_courses,
 -- This requires disabling trigger to register for past sessions.
@@ -401,4 +410,13 @@ call cancel_registration(1, 6, 2);
 -- select * from get_my_registrations(10);
 
 ----------------------------- CALL TO get potential Course to promote -----------------------------
--- select * from promote_courses();
+select * from promote_courses();
+
+----------------------------- CALL TO VIEW MANAGERS' REPORT -----------------------------
+-- select * from view_manager_report();
+
+-- Cases tested:
+-- 1. Area with courses with no offerings
+-- 2. Tied courses with no registrations
+-- 3. Check last year offerings and next year is excluded
+-- 4. Pays and redeems sum correct
