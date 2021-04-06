@@ -277,19 +277,6 @@ with package_with_status as
 	when max(courseSessionDate) >= (CURRENT_DATE + 7) and sessionsLeft = 0 THEN 'partially active'
     else 'active'
     end as packageStatus, customerId, sessionsLeft, purchaseDate
-from (select Redeems.packageId, courseSessionDate, sessionsLeft, Redeems.customerId, Purchases.purchaseDate
-      from Redeems inner join Purchases on Redeems.packageId = Purchases.packageId and Redeems.customerId = Purchases.customerId) as RedeemsPurchases
-group by packageId, customerId, sessionsLeft, RedeemsPurchases.purchaseDate)
-select packageId, packageStatus, customerId, sessionsLeft, purchaseDate
-from package_with_status;
-
-create or replace view PurchasesView as
-with package_with_status as
-(select packageId, case 
-    when max(courseSessionDate) < (CURRENT_DATE + 7) and sessionsLeft = 0 THEN 'inactive'
-	when max(courseSessionDate) >= (CURRENT_DATE + 7) and sessionsLeft = 0 THEN 'partially active'
-    else 'active'
-    end as packageStatus, customerId, sessionsLeft, purchaseDate
 from (select Purchases.packageId, courseSessionDate, sessionsLeft, Purchases.customerId, Purchases.purchaseDate
       from Redeems right join Purchases on Redeems.packageId = Purchases.packageId and Redeems.customerId = Purchases.customerId
 	  	and Redeems.purchaseDate = Purchases.PurchaseDate) as RedeemsPurchases
