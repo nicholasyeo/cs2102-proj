@@ -176,21 +176,22 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 -- _courseId integer, _launchDate date, _offeringId integer,  _weekday integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
 --    _instructorId integer, _roomId integer
 
-call add_session(2, date '2021-02-01', 2, 1, date '2023-02-02', 10, 1, 8, 1);  -- Test: session > offering endDate. Expect endDate of CourseOffering to change as well
+call add_session(2, date '2021-02-01', 2, 1, date '2023-02-02', 14, 1, 8, 1);  -- Test: session > offering endDate. Expect endDate of CourseOffering to change as well
+
 call add_session(2, date '2021-02-02', 3, 1, date '2023-02-03', 10, 1, 8, 1);
 call add_session(1, date '2021-01-01', 1, 3, date '2021-07-01', 10, 1, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
-call add_session(1, date '2021-01-01', 1, 2, date '2021-07-16', 15, 2, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
+call add_session(1, date '2021-01-01', 1, 2, date '2021-07-16', 15, 2, 7, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
 call add_session(3, date '2021-01-01', 1, 4, date '2021-07-15', 15, 1, 9, 3); 
-call add_session(4, date '2021-01-01', 1, 2, date '2021-07-16', 15, 1, 9, 2); 
+call add_session(4, date '2021-01-01', 1, 2, date '2021-07-16', 15, 1, 10, 2); 
 
-call add_session(6, date '2021-02-01', 2, 4, date '2021-07-15', 15, 1, 9, 2); 
+call add_session(6, date '2021-02-01', 2, 4, date '2021-07-15', 15, 1, 8, 2); 
 call add_session(6, date '2021-02-01', 2, 5, date '2021-07-16', 14, 2, 9, 6); 
-call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 11, 1, 9, 4); 
-call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 15, 2, 9, 5); 
+call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 10, 1, 7, 4); 
+call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 15, 2, 8, 5); 
 call add_session(7, date '2021-02-01', 2, 5, date '2021-07-12', 15, 1, 9, 2);
-call add_session(10, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
-call add_session(8, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
-call add_session(7, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2);
+call add_session(10, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 10, 3); 
+call add_session(8, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 7, 4); 
+call add_session(7, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 8, 5);
 
 call add_session(15, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
 
@@ -208,6 +209,7 @@ call add_session(11, date '2020-02-02', 1, 1, date '2020-07-02', 15, 1, 10, 2);
 call add_session(12, date '2020-02-02', 1, 1, date '2020-07-03', 15, 1, 10, 2);
 call add_session(13, date '2020-02-02', 1, 1, date '2020-07-04', 15, 1, 10, 2);
 call add_session(14, date '2020-02-02', 1, 1, date '2020-07-05', 15, 1, 10, 2);
+
 ----------------------------- UPDATE CourseSession Room -----------------------------
 call update_room(1, 1, date '2021-01-16', 10, 3 ,4);
 
@@ -249,7 +251,7 @@ call buy_course_package(11, 7);
 ----------------------------- CALL TO register for sessions -----------------------------
 
 -- Pays
-call register_session(1, 2, 2, date '2023-02-02', 10, 0);
+call register_session(1, 2, 2, date '2023-02-02', 14, 0);
 
 call register_session(1, 1, 1, date '2021-07-01', 10, 0);
 
@@ -258,7 +260,7 @@ call register_session(1, 1, 1, date '2021-07-01', 10, 0);
 call register_session(2, 1, 1, date '2021-07-01', 10, 0);
 call register_session(2, 2, 3, date '2023-02-03', 10, 0);
 
-call register_session(13, 2, 2, date '2023-02-02', 10, 0);
+call register_session(13, 2, 2, date '2023-02-02', 14, 0);
 call register_session(13, 6, 2, date '2021-07-16', 14, 0);
 
 call register_session(14, 4, 1, date '2021-07-16', 15,  0);
@@ -273,9 +275,9 @@ call register_session(15, 5, 1, date '2021-07-22', 15,  0);
 
 call register_session(1, 2, 3, date '2023-02-03', 10, 1);
 
-call register_session(2, 2, 2, date '2023-02-02', 10, 1);
+call register_session(2, 2, 2, date '2023-02-02', 14, 1);
 
-call register_session(3, 2, 2, date '2023-02-02', 10, 1);
+call register_session(3, 2, 2, date '2023-02-02', 14, 1);
 call register_session(3, 6, 2, date '2021-07-16', 14, 1);
 
 call register_session(4, 4, 1, date '2021-07-16', 15, 1);
@@ -366,10 +368,11 @@ call register_session(9, 14, 1, date '2020-07-05', 15, 0);
 
 ------------------------------- Cancel Registration for Pays ----------------------------
 -- To be cancelled (Pays)
+
 call register_session(13, 4, 1, date '2021-07-16', 15,  0);
 call register_session(13, 3, 1, date '2021-07-15', 15,  0);
 
-call register_session(14, 2, 2, date '2023-02-02', 10, 0);
+call register_session(14, 2, 2, date '2023-02-02', 14, 0);
 call register_session(14, 6, 2, date '2021-07-16', 14, 0);
 
 call register_session(15, 1, 1, date '2021-07-01', 10, 0);
@@ -419,7 +422,7 @@ call cancel_registration(1, 6, 2);
 -- select * from get_my_registrations(10);
 
 ----------------------------- CALL TO get potential Course to promote -----------------------------
-select * from promote_courses();
+-- select * from promote_courses();
 
 ----------------------------- CALL TO VIEW MANAGERS' REPORT -----------------------------
 -- select * from view_manager_report();

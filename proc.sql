@@ -1523,7 +1523,7 @@ $$ LANGUAGE PLPGSQL;
 CREATE TRIGGER regDeadline_offering_trigger
 BEFORE INSERT OR UPDATE ON CourseOfferings 
 FOR EACH ROW EXECUTE FUNCTION regDeadline_offering_func();
-
+/*
 ---CREATE TRIGGER FOR PART TIMER INSTRUCTOR 30 HR
 CREATE OR REPLACE FUNCTION parttimers_hours_func() RETURNS TRIGGER
 AS $$
@@ -1576,9 +1576,9 @@ $$ LANGUAGE PLPGSQL;
 CREATE TRIGGER parttimers_hours_tigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION parttimers_hours_func();
+*/
 
-
-
+/*
 -- Trigger for instructor teaching hours availability +- 1hr
 
 CREATE OR REPLACE FUNCTION check_instructor_hours_func() RETURNS TRIGGER 
@@ -1612,12 +1612,46 @@ BEGIN
 	END LOOP;
 END;
 $$ LANGUAGE PLPGSQL;
+*/
 
+-- Trigger for instructor teaching hours availability +- 1hr
+
+CREATE OR REPLACE FUNCTION check_instructor_hours_func() RETURNS TRIGGER 
+AS $$
+DECLARE
+	selectedDate DATE;
+	startHr INT;
+	endHr INT;
+	teachingDuration INT;
+	counter INT;
+	
+BEGIN
+	selectedDate := NEW.sessDate;
+	startHr := NEW.sessHour;
+	SELECT duration INTO teachingDuration
+	FROM Courses
+	WHERE courseId = NEW.courseId;
+	endHr := startHr + teachingDuration;
+	counter := startHr - 1;
+	LOOP
+		IF EXISTS (SELECT 1 FROM CourseSessions cs WHERE cs.employeeId = NEW.employeeId 
+						   AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
+			RAISE EXCEPTION 'Instructor unavailable';
+			RETURN NULL;
+		END IF;
+		counter := counter + 1;
+		
+		IF (counter > endHr + 1) THEN 
+		RETURN NEW;
+		END IF;
+	END LOOP;
+END;
+$$ LANGUAGE PLPGSQL;
 CREATE TRIGGER instructor_hours_trigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION check_instructor_hours_func();
 
-
+/*
 -- Trigger to check session timings
 CREATE OR REPLACE FUNCTION check_sessiontimings_func() RETURNS TRIGGER
 AS $$
@@ -1633,8 +1667,11 @@ BEGIN
 	WHERE cs.courseId = NEW.courseId;
 	endTime := startTime + teachingDuration;
 	counter := startTime;
+	raise notice 'Start time is: %', startTime;
+	raise notice 'End time is: %', endTime;
 	LOOP
-		IF (counter < 9 OR counter = 12 OR counter = 13 OR counter > 18) THEN 
+		raise notice 'Current time is: %', counter;
+		IF (counter < 9 OR counter = 12 OR counter = 13 OR counter > 18) THEN
 			RAISE EXCEPTION 'Session timing unacceptable!';
 			RETURN NULL;
 		END IF;
@@ -1646,11 +1683,42 @@ BEGIN
 	
 END;
 $$ LANGUAGE PLPGSQL;
+*/
+-- Trigger to check session timings
+CREATE OR REPLACE FUNCTION check_sessiontimings_func() RETURNS TRIGGER
+AS $$
+DECLARE
+	teachingDuration INT;
+	startTime INT;
+	endTime INT;
+	counter INT;
+BEGIN
+	startTime := NEW.sessHour;
+	SELECT duration INTO teachingDuration
+	FROM Courses
+	WHERE courseId = NEW.courseId;
+	endTime := startTime + teachingDuration;
+	counter := startTime;
+	raise notice 'Start time is: %', startTime;
+	raise notice 'End time is: %', endTime;
+	
+	if (startTime < 9 or startTime > 17) then
+		raise exception 'Unsuitable start/end timing';
+	elseif (startTime = 12 or startTime = 13) then
+		raise exception 'Sessions are not allowed to be held between 12pm-2pm';
+	elseif (startTime < 12 and endTime > 12) then
+		raise exception 'Sessions cannot extend past 12pm.';
+	else
+		return new;
+	end if;
+END;
+$$ LANGUAGE PLPGSQL;
 
 CREATE TRIGGER check_sessiontimings_trigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION check_sessiontimings_func();
 
+/*
 -- Trigger to check that lecture room holds 1 session at a time
 
 CREATE OR REPLACE FUNCTION check_room_hours_func() RETURNS TRIGGER 
@@ -1684,7 +1752,43 @@ BEGIN
 	END LOOP;
 END;
 $$ LANGUAGE PLPGSQL;
+*/
 
+-- Trigger to check that lecture room holds 1 session at a time
+
+CREATE OR REPLACE FUNCTION check_room_hours_func() RETURNS TRIGGER 
+AS $$
+DECLARE
+	selectedDate DATE;
+	startHr INT;
+	endHr INT;
+	teachingDuration INT;
+	counter INT;
+	
+BEGIN
+	selectedDate := NEW.sessDate;
+	startHr := NEW.sessHour;
+	SELECT duration INTO teachingDuration
+	FROM Courses
+	WHERE courseId = NEW.courseId;
+	endHr := startHr + teachingDuration;
+	counter := startHr;
+	LOOP
+		IF EXISTS (SELECT 1
+				   FROM LectureRooms lr INNER JOIN CourseSessions cs ON lr.roomId = cs.roomId
+				   WHERE lr.roomId = NEW.roomId 
+					AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
+			RAISE EXCEPTION 'Lecture room unavailable.';
+			RETURN NULL;
+		END IF;
+		counter := counter + 1;
+		
+		IF (counter > endHr) THEN 
+		RETURN NEW;
+		END IF;
+	END LOOP;
+END;
+$$ LANGUAGE PLPGSQL;
 CREATE TRIGGER room_hours_trigger
 BEFORE INSERT OR UPDATE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION check_room_hours_func();
