@@ -1055,7 +1055,9 @@ BEGIN
         and courseSessionDate = _courseSessionDate and courseSessionHour = _courseSessionHour;
     
     -- Allow updating if seats are available
-    IF totalRegistered < _seatingCapacity THEN
+    IF totalRegistered >= _seatingCapacity THEN
+		RAISE EXCEPTION 'There are no more available seats for this session.';
+	ELSE
         If checkPaymentMode = 1 THEN
             -- Customer redeemed session
             update Redeems
@@ -1163,7 +1165,9 @@ create or replace procedure update_instructor(_courseId integer, _offeringId int
     _courseSessionHour integer, _newInstructorId integer)
 as $$
 BEGIN
-    IF CURRENT_DATE > _courseSessionDate THEN
+    IF CURRENT_DATE >= _courseSessionDate THEN
+		RAISE EXCEPTION 'Cannot update the instructor when the course session has already started.';
+	ELSE
         update CourseSessions
         set employeeId = _newInstructorId
         where courseId = _courseId and offeringId = _offeringId and sessDate = _courseSessionDate and sessHour = _courseSessionHour;
@@ -1190,13 +1194,15 @@ BEGIN
                 and courseSessionDate = _courseSessionDate and courseSessionHour = _courseSessionHour;
     totalRegistered := payingCustomers + redeemingCustomers;
 
-    IF _seatingCapacity > totalRegistered and CURRENT_DATE > _courseSessionDate THEN
+    IF _seatingCapacity < totalRegistered THEN
+		Raise Exception 'Seating capacity of room is too small.';
+	ELSEIF CURRENT_DATE >= _courseSessionDate THEN
+		Raise Exception 'Current date is past session date';  
+    ELSE 
         update CourseSessions
         set roomId = _newRoomId
         where courseId = _courseId and offeringId = _offeringId 
             and sessDate = _courseSessionDate and sessHour = _courseSessionHour and sessionId = _sessionId;
-    ELSE 
-        Raise Exception 'Seating capacity of room is too small/current date is past session date';
     END IF;
 END;
 $$ language plpgsql;
@@ -1216,7 +1222,11 @@ BEGIN
                 and courseSessionDate = _courseSessionDate and courseSessionHour = _courseSessionHour;
     totalRegistered := payingCustomers + redeemingCustomers;
 
-    IF totalRegistered = 0 and CURRENT_DATE > _courseSessionDate THEN
+    IF totalRegistered <> 0 THEN
+		RAISE EXCEPTION 'Cannot remove a session that has registrations.';
+	ELSEIF CURRENT_DATE >= _courseSessionDate THEN
+		RAISE EXCEPTION 'Current date is past session date';
+	ELSE
         delete from CourseSessions
         where courseId = courseId and offeringId = _offeringId  
             and sessDate = _courseSessionDate and sessHour = _courseSessionHour;
@@ -2047,3 +2057,24 @@ for each row execute function pay_session_check();
 create trigger for_buying_package_check
 before insert on Purchases
 for each row execute function check_customer_packages_exists();
+
+create or replace function session_instructor_specialises_check() returns trigger as $$
+declare
+    instructorId int;
+    _areaName text;
+BEGIN
+	select areaName into _areaName from Courses where courseId = NEW.courseId;
+    
+	if NEW.employeeId not in (select employeeId from Instructors) then
+        raise exception 'Instructor does not exist';
+	elseif (select 1 from Specialises where areaName = _areaName and employeeId = NEW.employeeId) is null then
+		raise exception 'The instructor does not teach this course area';
+    else
+		return new;
+	end if;
+END;
+$$ language plpgsql;
+
+create trigger session_instructor_specialises_check_trigger
+before insert or update on CourseSessions
+for each row execute function session_instructor_specialises_check();

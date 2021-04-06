@@ -5,10 +5,10 @@ call add_employee('Charlie'::text, 'NTU'::text, 90000003, 'charlie@gmail.com'::t
 call add_employee('Derek'::text, 'SMU'::text, 90000004, 'derek@gmail.com'::text, 4000::money, null, current_date, 'administrator'::text, array[]::text[]);
 call add_employee('Eric'::text, 'Hougang'::text, 90000005, 'eric@gmail.com'::text, 4000::money, null, current_date, 'manager'::text, array['Algorithms', 'Database', 'Outdated Course Area']);
 call add_employee('Felix'::text, 'Sengkang'::text, 90000006, 'felix@gmail.com'::text, 2000::money, null, current_date, 'manager'::text, array['Artificial Intelligence', 'Software Engineering']);
-call add_employee('Gerald'::text, 'Punggol'::text, 90000007, 'gerald@gmail.com'::text, 2500::money, null, current_date, 'instructor'::text, array['Database']);
-call add_employee('Harry'::text, 'Woodlands'::text, 90000008, 'harry@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms']);
-call add_employee('Ivy'::text, 'Kovan'::text, 90000009, 'ivy@gmail.com'::text, null, 15::money, current_date, 'instructor'::text, array['Network']);
-call add_employee('Jay'::text, 'Serangoon'::text, 90000010, 'jay@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Artificial Intelligence','Outdated Course Area']);
+call add_employee('Gerald'::text, 'Punggol'::text, 90000007, 'gerald@gmail.com'::text, 2500::money, null, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Database', 'Software Engineering', 'Network']);
+call add_employee('Harry'::text, 'Woodlands'::text, 90000008, 'harry@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Software Engineering']);
+call add_employee('Ivy'::text, 'Kovan'::text, 90000009, 'ivy@gmail.com'::text, null, 15::money, current_date, 'instructor'::text, array['Network', 'Artificial Intelligence', 'Algorithms', 'Software Engineering']);
+call add_employee('Jay'::text, 'Serangoon'::text, 90000010, 'jay@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Network', 'Outdated Course Area', 'Database']);
 
 ----------------------------- CALLS TO REMOVE EMPLOYEES -----------------------------
 call remove_employee(2, date '2021-06-01');
@@ -193,7 +193,7 @@ call add_session(10, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 10, 3);
 call add_session(8, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 7, 4); 
 call add_session(7, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 8, 5);
 
-call add_session(15, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
+call add_session(15, date '2021-02-02', 1, 5, date '2021-07-12', 9, 1, 9, 2); 
 
 -- more recent sessions to test PurchasesView inactive package
 -- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 15, 1, 9, 2); 
@@ -211,10 +211,12 @@ call add_session(13, date '2020-02-02', 1, 1, date '2020-07-04', 15, 1, 10, 2);
 call add_session(14, date '2020-02-02', 1, 1, date '2020-07-05', 15, 1, 10, 2);
 
 ----------------------------- UPDATE CourseSession Room -----------------------------
-call update_room(1, 1, date '2021-01-16', 10, 3 ,4);
+-- ERROR: current date is past course session date
+-- call update_room(1, 1, date '2021-01-16', 10, 3 ,4);
 
 ----------------------------- UPDATE CourseSession Instructor -----------------------------
-call update_instructor(1, 1, date '2021-01-16', 10, 9);
+-- ERROR: current date is past course session date
+-- call update_instructor(1, 1, date '2021-01-16', 10, 9);
 
 ----------------------------- CALL TO BUY CoursePackages -----------------------------
 call buy_course_package(1, 6);
@@ -293,7 +295,7 @@ call register_session(7, 3, 1, date '2021-07-15', 15, 1);
 
 call register_session(4, 7, 2, date '2021-07-12', 15, 1);
 
-call register_session(8, 15, 1, date '2021-07-12', 15, 0);
+call register_session(8, 15, 1, date '2021-07-12', 9, 0);
 call register_session(9, 8, 1, date '2021-07-12', 15, 1);
 
 -- Customer 8 and 9 will register for outdated sessions for promote_courses,
