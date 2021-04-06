@@ -124,9 +124,9 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 	values (3, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
 
 -- more recent offerings
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (4, '2021-02-03', 100, 99, '2021-03-15', 'available', 150 , '2021-04-01', '2021-07-20', 2, 3);
+-- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+-- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
+-- 	values (4, '2021-02-03', 100, 99, '2021-04-15', 'available', 150 , '2021-04-01', '2021-07-20', 2, 3);
 
 -- Outdated CourseOffering for promote_courses()
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
@@ -152,11 +152,11 @@ call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 15, 2, 9, 5);
 call add_session(7, date '2021-02-01', 2, 5, date '2021-07-12', 15, 1, 9, 2); 
 
 -- more recent sessions to test PurchasesView inactive package
-call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 15, 1, 9, 2); 
-call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 14, 2, 8, 2); 
-call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 9, 3, 10, 2); 
-call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 10, 4, 7, 2); 
-call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 11, 5, 8, 2); 
+-- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 15, 1, 9, 2); 
+-- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 14, 2, 8, 2); 
+-- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 9, 3, 10, 2); 
+-- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 10, 4, 7, 2); 
+-- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 11, 5, 8, 2); 
 
 -- call add_session(1, date '2021-01-01', 1, 3, date '2021-01-16', 10, 3, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
 
@@ -179,7 +179,7 @@ call buy_course_package(7, 6);
 call buy_course_package(8, 7);
 call buy_course_package(9, 8);
 call buy_course_package(10, 9);
-call buy_course_package(11, 1);
+call buy_course_package(11, 7);
 
 -- Error testing
 -- Non existing customer
@@ -246,14 +246,14 @@ call register_session(7, 3, 1, date '2021-07-15', 15, 1);
 call register_session(4, 7, 2, date '2021-07-12', 15, 1);
 
 -- register for recent sessions to test inactive package in PurchasesView
-call register_session(11, 2, 4, date '2021-04-09', 15, 1);
-call register_session(11, 2, 4, date '2021-04-09', 14, 1);
-call register_session(11, 2, 4, date '2021-04-09', 11, 1);
-call register_session(11, 2, 4, date '2021-04-09', 10, 1);
-call register_session(11, 2, 4, date '2021-04-09', 9, 1);
+-- call register_session(11, 2, 4, date '2021-04-09', 15, 1);
+-- call register_session(11, 2, 4, date '2021-04-09', 14, 1);
+-- call register_session(11, 2, 4, date '2021-04-09', 11, 1);
+-- call register_session(11, 2, 4, date '2021-04-09', 10, 1);
+-- call register_session(11, 2, 4, date '2021-04-09', 9, 1);
 
 -- Test if customer can buy more packages once his package becomes inactive
-call buy_course_package(11, 2);
+-- call buy_course_package(11, 8);
 
 -- Customer 6 and 7 will register for outdated sessions for promote_courses
 -- call register_session(6, 1, 1, date '2021-02-01', 10, 1);
