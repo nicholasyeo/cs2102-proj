@@ -714,54 +714,56 @@ returns table (
 declare
     cur cursor for (
         with InactiveC as (
-            select distinct customerId
-            from Redeems r1
-            where r1.customerId not in (
-                select customerId
-                from Redeems r2
-                where r1.customerId = r2.customerId and
-                (extract(month from current_date) - extract(month from  r2.courseSessionDate) <= 6)
-            )
-            union
-            select distinct customerId
-            from Pays p1
-            where p1.customerId not in (
-                select customerId
-                from Pays p2
-                where p1.customerId = p2.customerId and
-                (extract(month from current_date) - extract(month from  courseSessionDate) <= 6)
-            )            
-            order by customerId asc
-			), InactivePackageCustomers as (
-						select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-						from InactiveC natural join Redeems
-						order by customerId asc
-			), InactivePayCustomers as (
-						select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-						from InactiveC natural join Pays
-						order by customerId asc
-			), InactiveCustomers as (
-						select * from InactivePayCustomers
-						union
-						select * from InactivePackageCustomers
-			), EmptyCustomers as (
-					select C.customerId, R.courseId, R.offeringId, R.courseSessionDate, R.courseSessionHour
-						from Customers C left outer join Redeems R on C.customerId = R.customerId
-						where C.customerId not in (
-							select distinct customerId
-							from Redeems 
-						) and C.customerId not in (
-							select distinct customerId
-							from Pays 
-						)
+			select distinct customerId
+			from Redeems r1
+			where r1.customerId not in (
+				select customerId
+				from Redeems r2
+				where r1.customerId = r2.customerId and
+				(current_date - r2.courseSessionDate <= 6)
 			)
-			select *
-			from InactiveCustomers
 			union
-			select *
-			from EmptyCustomers
+			select distinct customerId
+			from Pays p1
+			where p1.customerId not in (
+				select customerId
+				from Pays p2
+				where p1.customerId = p2.customerId and
+				(current_date - p2.courseSessionDate <= 6)
+			)            
 			order by customerId asc
-		);
+		), InactivePackageCustomers as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from InactiveC natural join Redeems
+			order by customerId asc
+		), InactivePayCustomers as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from InactiveC natural join Pays
+			order by customerId asc
+		), InactiveCustomers as (
+			select * from InactivePayCustomers
+			union
+			select * from InactivePackageCustomers
+		), EmptyCustomers as (
+			select C.customerId, R.courseId, R.offeringId, R.courseSessionDate, R.courseSessionHour
+			from Customers C left outer join Redeems R on C.customerId = R.customerId
+			where C.customerId not in (
+				select distinct customerId
+				from Redeems 
+			) and C.customerId not in (
+				select distinct customerId
+				from Pays 
+			)
+			order by customerId asc
+		)
+
+		select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+		from InactiveCustomers
+		union
+		select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+		from EmptyCustomers
+		order by customerId asc , courseSessionDate desc
+	);
 
     r record;
 	customer_name text;
@@ -797,7 +799,8 @@ begin
 					return query (
 					select case when true then r.customerId end customer_id,
 						case when true then customer_name end customer_name,
-						areaName as course_area, courseId as course_id,
+						areaName as course_area,
+						courseId as course_id,
 						courseTitle as course_title, 
 						launchDate as launch_date,
 						registrationDeadline as registration_deadline,
@@ -810,50 +813,21 @@ begin
 					);
 				end if;
 			end if;
-		
-					/*
-                    select areaName into currentArea from Courses where courseId = r.courseId;
-                    courseOfferingArr = array(
-                        select offeringId, registrationDeadline
-                        from CourseOffering
-                        where r.courseId = courseId and
-                        launchDate <= current_date and
-                        registrationDeadline >= current_date
-                        order by registrationDeadline asc
-                    );
-
-                    foreach i IN ARRAY courseOfferingArr
-                    loop
-                        customer_id := r.customerId;
-                        select customerName into customer_name from Customers where customerId = r.customerId;
-                        course_area := currentArea;
-                        course_id := r.courseId;
-                        select courseTitle into course_title from Courses where courseId = r.courseId;
-                        
-                        select launchDate, registrationDeadline, courseFee into launch_date,registration_deadline, fees
-                        from CourseOfferings
-                        where courseId = r.courseId and offeringId = courseOfferingArr[i];
-                        return next;
-                    end loop;
-                end if;
-                -- enter here if current customer does not like any courses
-            end if;
-        -- different customer
-		*/
         else
 
             currentCustomer = r.customerId;
-            countCustomer = 0;
+            countCustomer = 1;
 
             if r.courseId is null then
-				
+				currentArea = NULL;
 				select customerName into customer_name
 				from Customers
 				where r.customerId = customerId;
 				return query (
 					select case when true then r.customerId end customer_id,
 						case when true then customer_name end customer_name,
-						areaName as course_area, courseId as course_id,
+						areaName as course_area,
+						courseId as course_id,
 						courseTitle as course_title, 
 						launchDate as launch_date,
 						registrationDeadline as registration_deadline,
@@ -863,51 +837,27 @@ begin
 						registrationDeadline >= current_date
 					order by registrationDeadline asc
 				);
-				/*
-                courseAreasArr = array(
-                    select areaname
-                    from Courses
-                );
-				
-                foreach i in array courseAreasArr
-                LOOP
-                    currentArea := i;
+			else
+				select customerName into customer_name
+						from Customers
+						where r.customerId = customerId;
 					
-					coursesArr = array(
-						select courseId
-						from Courses
-						where areaName = currentArea
-					);
-					foreach x in array coursesArr
-						LOOP
-						courseOfferingArr = array(
-							With SortedOfferings as (
-								select offeringId, registrationDeadline
-								from CourseOfferings
-								where x = courseId and
-								launchDate <= current_date and
-								registrationDeadline >= current_date
-								order by registrationDeadline asc
-							)
-							select offeringId
-							from SortedOfferings
-						);
+				select areaName into currentArea from Courses where courseId = r.courseId;
 
-						foreach b in array courseOfferingArr
-						loop
-							customer_id := r.customerId;
-							select customerName into customer_name from Customers where customerId = r.customerId;
-							course_area := i;
-							course_id := x;
-							select courseTitle into course_title from Courses where courseId = x;
-
-							select launchDate, registrationDeadline, courseFee into launch_date,registration_deadline, fees
-							from CourseOfferings
-							where courseId = x and offeringId = b;
-							return next;
-						end loop;
-					end loop;
-				end loop;*/
+				return query (
+				select case when true then r.customerId end customer_id,
+					case when true then customer_name end customer_name,
+					areaName as course_area, courseId as course_id,
+					courseTitle as course_title, 
+					launchDate as launch_date,
+					registrationDeadline as registration_deadline,
+					courseFee as fees
+				from Courses natural join CourseOfferings
+				where launchDate <= current_date and
+					registrationDeadline >= current_date and
+					areaName = currentArea
+				order by registrationDeadline asc
+				);
             end if;
         end if;
 	end loop;
@@ -1858,7 +1808,7 @@ BEGIN
         raise exception 'Customer does not exist';
     elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
         raise exception 'CourseOffering does not exist';
-    elseif row(NEW.courseSessionDate, new.courseSessionHour) not in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId) then
+    elseif not(row(NEW.courseSessionDate, new.courseSessionHour) in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId)) then
         raise exception 'This session does not exist';
     elseif exists (select 1 from Redeems where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer already has an existing redemption of this offering' ;
@@ -1887,7 +1837,7 @@ BEGIN
         raise exception 'Customer does not exist';
     elseif (select count(courseId) from CourseOfferings where courseId = NEW.courseId and NEW.offeringId = offeringId)  != 1 then
         raise exception 'CourseOffering does not exist';
-    elseif row(NEW.courseSessionDate, new.courseSessionHour) not in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId) then
+    elseif not(row(NEW.courseSessionDate, new.courseSessionHour) in (select sessDate, sessHour from CourseSessions where courseId = NEW.courseId and NEW.offeringId = offeringId)) then
         raise exception 'This session does not exist';
     elseif exists (select 1 from Redeems where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer already has an existing redemption of this offering' ;

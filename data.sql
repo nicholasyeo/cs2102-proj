@@ -49,8 +49,10 @@ call add_course('Design & Analysis of Algorithms', 'Master theorem, Greedy algor
 call add_course('Introduction to Computer Networks', 'Application, Transport, Network, Link, Physical layers', 'Network', 3);
 call add_course('Introduction to Information Security', 'Classical/historical ciphers, Modern ciphers, Cryptosystems', 'Security', 2);
 call add_course('Database Systems', 'Relational Algebra, SQL, ER, Normal Forms', 'Database', 2);
-call add_course('Outdated Course', 'Teaches outdated material', 'Outdated Course Area', 2);
-
+call add_course('Outdated Course', 'Teaches outdated material', 'Artificial Intelligence', 2);
+call add_course('Outdated Course1', 'Teaches outdated material', 'Database', 2);
+call add_course('Outdated Course2', 'Teaches outdated material', 'Algorithms', 2);
+call add_course('Outdated Course3', 'Teaches outdated material', 'Network', 2);
 ---------------------------- CALLS TO ADD COURSE PACKAGES ----------------------------
 
 -- Expired packages
@@ -122,7 +124,19 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (3, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
+	
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (1, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 10, 3);
 
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (1, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 8, 3);
+	
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (1, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 7, 3);
+	
 -- more recent offerings
 -- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 -- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
@@ -132,8 +146,17 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
  							 seatingCapacity, startDate, endDate, courseId, employeeId)
  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 11, 4);
+
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+ 							 seatingCapacity, startDate, endDate, courseId, employeeId)
+ 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 12, 4);
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+ 							 seatingCapacity, startDate, endDate, courseId, employeeId)
+ 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 13, 4);
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+ 							 seatingCapacity, startDate, endDate, courseId, employeeId)
+ 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 14, 4);
 	
- 
 ----------------------------- CALL TO ADD CourseSession -----------------------------
 -- _courseId integer, _launchDate date, _offeringId integer,  _weekday integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
 --    _instructorId integer, _roomId integer
@@ -149,7 +172,10 @@ call add_session(6, date '2021-02-01', 2, 4, date '2021-07-15', 15, 1, 9, 2);
 call add_session(6, date '2021-02-01', 2, 5, date '2021-07-16', 14, 2, 9, 6); 
 call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 11, 1, 9, 4); 
 call add_session(5, date '2021-01-01', 1, 4, date '2021-07-22', 15, 2, 9, 5); 
-call add_session(7, date '2021-02-01', 2, 5, date '2021-07-12', 15, 1, 9, 2); 
+call add_session(7, date '2021-02-01', 2, 5, date '2021-07-12', 15, 1, 9, 2);
+call add_session(10, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
+call add_session(8, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
+call add_session(7, date '2021-02-02', 1, 5, date '2021-07-12', 15, 1, 9, 2); 
 
 -- more recent sessions to test PurchasesView inactive package
 -- call add_session(2, date '2021-02-03', 4, 5, date '2021-04-09', 15, 1, 9, 2); 
@@ -161,7 +187,10 @@ call add_session(7, date '2021-02-01', 2, 5, date '2021-07-12', 15, 1, 9, 2);
 -- call add_session(1, date '2021-01-01', 1, 3, date '2021-01-16', 10, 3, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
 
 -- Outdated session
--- call add_session(11, date '2020-02-02', 1, 1, date '2020-03-12', 15, 1, 10, 2);
+call add_session(11, date '2020-02-02', 1, 1, date '2020-07-02', 15, 1, 10, 2);
+call add_session(12, date '2020-02-02', 1, 1, date '2020-07-03', 15, 1, 10, 2);
+call add_session(13, date '2020-02-02', 1, 1, date '2020-07-04', 15, 1, 10, 2);
+call add_session(14, date '2020-02-02', 1, 1, date '2020-07-05', 15, 1, 10, 2);
 ----------------------------- UPDATE CourseSession Room -----------------------------
 call update_room(1, 1, date '2021-01-16', 10, 3 ,4);
 
@@ -221,25 +250,7 @@ call register_session(14, 3, 1, date '2021-07-15', 15,  0);
 call register_session(15, 7, 2, date '2021-07-12', 15,  0);
 call register_session(15, 5, 1, date '2021-07-22', 15,  0);
 
--- To be cancelled (Pays)
-call register_session(13, 4, 1, date '2021-07-16', 15,  0);
-call register_session(13, 3, 1, date '2021-07-15', 15,  0);
 
-call register_session(14, 2, 2, date '2023-02-02', 10, 0);
-call register_session(14, 6, 2, date '2021-07-16', 14, 0);
-
-call register_session(15, 1, 1, date '2021-07-01', 10, 0);
-call register_session(15, 2, 3, date '2023-02-03', 10, 0);
-
-------------------------------- Cancel Registration for Pays ----------------------------
-call cancel_registration(13, 4, 1);
-call cancel_registration(13, 3, 1);
-
-call cancel_registration(14, 2, 2);
-call cancel_registration(14, 6, 2);
-
-call cancel_registration(15, 1, 1);
-call cancel_registration(15, 2, 3);
 
 -- Redeems
 
@@ -264,24 +275,32 @@ call register_session(7, 3, 1, date '2021-07-15', 15, 1);
 
 call register_session(4, 7, 2, date '2021-07-12', 15, 1);
 
--- To be cancelled (Redeems)
-call register_session(1, 5, 1, date '2021-07-22', 15, 1);
 
-call register_session(7, 2, 3, date '2023-02-03', 10, 1);
-call register_session(7, 7, 2, date '2021-07-12', 15, 1);
+-- Customer 8 and 9 will register for outdated sessions for promote_courses,
+-- This requires disabling trigger to register for past sessions.
 
+/* Hazel registers for courses under AI, Database, Algo 
+call register_session(8, 11, 1, date '2020-07-02', 15, 1);
+call register_session(8, 12, 1, date '2020-07-03', 15, 1);
+call register_session(8, 13, 1, date '2020-07-04', 15, 1);
 
-call register_session(1, 6, 2, date '2021-07-16', 14, 1);
+Ian registers for courses under AI, Network and Algo 
+call register_session(9, 11, 1, date '2020-07-02', 15, 0);
+call register_session(9, 13, 1, date '2020-07-04', 15, 0);
+call register_session(9, 14, 1, date '2020-07-05', 15, 0);
 
------------------------------- Cancel Registration for Redeems ----------------------------
-call cancel_registration(1, 5, 1);
+/* 	
+	Ian registers for courses under AI, Database, Algo and Network.
+	Expected to only see Database, Algo and Network because they are 3 most recent areas.
+*/
+call register_session(9, 11, 1, date '2020-07-02', 15, 0);
+call register_session(9, 12, 1, date '2020-07-03', 15, 0);
+call register_session(9, 13, 1, date '2020-07-04', 15, 0);
+call register_session(9, 14, 1, date '2020-07-05', 15, 0);
 
-call cancel_registration(7, 2, 3);
-call cancel_registration(7, 7, 2);
+*/
 
-call cancel_registration(1, 6, 2);
-
--- register for recent sessions to test inactive package in PurchasesView
+-- Register for recent sessions to test inactive package in PurchasesView
 -- call register_session(11, 2, 4, date '2021-04-09', 15, 1);
 -- call register_session(11, 2, 4, date '2021-04-09', 14, 1);
 -- call register_session(11, 2, 4, date '2021-04-09', 11, 1);
@@ -290,13 +309,6 @@ call cancel_registration(1, 6, 2);
 
 -- Test if customer can buy more packages once his package becomes inactive
 -- call buy_course_package(11, 8);
-
--- Customer 6 and 7 will register for outdated sessions for promote_courses
--- call register_session(6, 1, 1, date '2021-02-01', 10, 1);
--- call register_session(6, 1, 1, date '2021-02-01', 10, 1);
-
--- call register_session(7, 1, 1, date '2021-02-01', 10, 1);
--- call register_session(7, 1, 1, date '2021-02-01', 10, 1);
 
 
 ------------------- Error testing -----------------------------
@@ -332,6 +344,46 @@ call cancel_registration(1, 6, 2);
 
 /* A customer with no more sessions should not be able to redeem again */
 -- call register_session(6, 2, 2, date '2023-02-02', 10, 1);
+
+
+------------------------------- Cancel Registration for Pays ----------------------------
+-- To be cancelled (Pays)
+call register_session(13, 4, 1, date '2021-07-16', 15,  0);
+call register_session(13, 3, 1, date '2021-07-15', 15,  0);
+
+call register_session(14, 2, 2, date '2023-02-02', 10, 0);
+call register_session(14, 6, 2, date '2021-07-16', 14, 0);
+
+call register_session(15, 1, 1, date '2021-07-01', 10, 0);
+call register_session(15, 2, 3, date '2023-02-03', 10, 0);
+
+
+call cancel_registration(13, 4, 1);
+call cancel_registration(13, 3, 1);
+
+call cancel_registration(14, 2, 2);
+call cancel_registration(14, 6, 2);
+
+call cancel_registration(15, 1, 1);
+call cancel_registration(15, 2, 3);
+
+------------------------------ Cancel Registration for Redeems ----------------------------
+
+-- To be cancelled (Redeems)
+call register_session(1, 5, 1, date '2021-07-22', 15, 1);
+
+call register_session(7, 2, 3, date '2023-02-03', 10, 1);
+call register_session(7, 7, 2, date '2021-07-12', 15, 1);
+
+
+call register_session(1, 6, 2, date '2021-07-16', 14, 1);
+
+call cancel_registration(1, 5, 1);
+
+call cancel_registration(7, 2, 3);
+call cancel_registration(7, 7, 2);
+
+call cancel_registration(1, 6, 2);
 
 ----------------------------- CALL TO get available course offerings -----------------------------
 
