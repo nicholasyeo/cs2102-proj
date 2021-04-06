@@ -177,8 +177,8 @@ create table Owns (
 	customerId 				integer,
 	ccNumber 				text not null,
 	primary key (customerId),
-	foreign key (customerId) references Customers (customerId),
-	foreign key (ccNumber) references CreditCards (ccNumber)
+	foreign key (customerId) references Customers (customerId)  on update cascade,
+	foreign key (ccNumber) references CreditCards (ccNumber)  on update cascade
 );
 
 create table Purchases (
@@ -187,8 +187,8 @@ create table Purchases (
 	purchaseDate			date,
 	sessionsLeft			integer not null,
 	primary key (customerId, packageId, purchaseDate),
-	foreign key (customerId) references Customers (customerId),
-	foreign key (packageId) references CoursePackages (packageId),
+	foreign key (customerId) references Customers (customerId)  on update cascade,
+	foreign key (packageId) references CoursePackages (packageId)  on update cascade,
 	constraint session_validity check (sessionsLeft >= 0)
 );
 
@@ -201,8 +201,8 @@ create table Pays (
 	courseSessionHour		integer,
 	paymentDate 			date not null,
 	primary key (paymentId, customerId, courseId, offeringId, courseSessionDate, courseSessionHour),
-	foreign key (customerId) references Customers (customerId),
-	foreign key (courseId, offeringId, courseSessionDate, courseSessionHour) references CourseSessions (courseId, offeringId, sessDate, sessHour)
+	foreign key (customerId) references Customers (customerId) on update cascade,
+	foreign key (courseId, offeringId, courseSessionDate, courseSessionHour) references CourseSessions (courseId, offeringId, sessDate, sessHour)  on update cascade
 );
 
 create table Redeems (
@@ -216,8 +216,8 @@ create table Redeems (
 	courseSessionHour 		integer,
 	redeemDate 				date not null,
 	primary key (redeemId, customerId, packageId, purchaseDate, courseId, offeringId, courseSessionDate, courseSessionHour),
-	foreign key (customerId, packageId, purchaseDate) references Purchases (customerId, packageId, purchaseDate),
-	foreign key (courseId, offeringId, courseSessionDate, courseSessionHour) references CourseSessions (courseId, offeringId, sessDate, sessHour)
+	foreign key (customerId, packageId, purchaseDate) references Purchases (customerId, packageId, purchaseDate)  on update cascade,
+	foreign key (courseId, offeringId, courseSessionDate, courseSessionHour) references CourseSessions (courseId, offeringId, sessDate, sessHour)  on update cascade
 );
 
 create table Cancels (
@@ -231,8 +231,8 @@ create table Cancels (
     isEarlyCancellation 	boolean not null,
     refundAmt 				money,
     primary key (customerId, courseId, offeringId, sessDate, sessHour, cancellationTimestamp),
-	foreign key (customerId) references Customers (customerId),
-	foreign key (courseId, offeringId, sessDate, sessHour) references CourseSessions(courseId, offeringId, sessDate, sessHour),
+	foreign key (customerId) references Customers (customerId) on update cascade,
+	foreign key (courseId, offeringId, sessDate, sessHour) references CourseSessions(courseId, offeringId, sessDate, sessHour) on update cascade,
 	constraint paymentMode_validity check (paymentMode in ('redeems', 'pays')),
     constraint refund_validity check (paymentMode <> 'pays' or isEarlyCancellation = false or refundAmt is not null)
 );
