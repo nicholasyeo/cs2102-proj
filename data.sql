@@ -193,13 +193,7 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (1, '2021-02-02', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 7, 3);
-
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (3, '2021-04-03', 100, 99, '2021-04-8', 'available', 150 , '2021-04-10', '2021-07-20', 6, 3);
-
-call add_session(6, date '2021-04-03', 3, 5, date '2021-04-11', 9, 1, 9, 2); 
-
+	
 -- more recent offerings
 -- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 -- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
@@ -305,6 +299,8 @@ call register_session(1, 2, 2, date '2023-02-02', 14, 0);
 
 call register_session(1, 1, 1, date '2021-07-01', 10, 0);
 
+-- call register_session(1, 11, 1, date '2020-03-12', 15, 0);
+
 call register_session(2, 1, 1, date '2021-07-01', 10, 0);
 call register_session(2, 2, 3, date '2023-02-03', 10, 0);
 
@@ -334,7 +330,7 @@ call register_session(4, 3, 1, date '2021-07-15', 15, 1);
 call register_session(5, 7, 2, date '2021-07-12', 15, 1);
 call register_session(5, 5, 1, date '2021-07-22', 15, 1);
 
-call register_session(6, 2, 3, date '2023-02-03', 10, 1); 
+call register_session(6, 2, 3, date '2023-02-03', 10, 1);
 
 call register_session(7, 5, 1, date '2021-07-22', 15, 1);
 call register_session(7, 3, 1, date '2021-07-15', 15, 1);
@@ -342,19 +338,18 @@ call register_session(7, 3, 1, date '2021-07-15', 15, 1);
 call register_session(4, 7, 2, date '2021-07-12', 15, 1);
 
 call register_session(8, 15, 1, date '2021-07-12', 9, 0);
+call register_session(9, 8, 1, date '2021-07-12', 15, 1);
 
-
-call register_session(9, 8, 1, date '2021-07-12', 15, 0);
 -- Customer 8 and 9 will register for outdated sessions for promote_courses,
 -- This requires disabling trigger to register for past sessions.
 
 /* Hazel registers for courses under AI, Database, Algo 
 call register_session(8, 11, 1, date '2020-07-02', 15, 1);
 call register_session(8, 12, 1, date '2020-07-03', 15, 1);
-call register_session(8, 13, 1, date '2020-07-04', 15, 1); */
+call register_session(8, 13, 1, date '2020-07-04', 15, 1);
 
-/* Ian registers for courses under AI, Network and Algo 
-call register_session(9, 11, 1, date '2020-07-02', 15, 0); */
+Ian registers for courses under AI, Network and Algo */
+call register_session(9, 11, 1, date '2020-07-02', 15, 0);
  /*
 call register_session(9, 13, 1, date '2020-07-04', 15, 0);
 call register_session(9, 14, 1, date '2020-07-05', 15, 0);
@@ -449,10 +444,6 @@ call register_session(7, 7, 2, date '2021-07-12', 15, 1);
 
 call register_session(1, 6, 2, date '2021-07-16', 14, 1);
 
---evnetuall here
-call register_session(1, 6, 3, date '2021-04-11', 9, 0);
-
-
 call cancel_registration(1, 5, 1);
 
 call cancel_registration(7, 2, 3);
@@ -476,7 +467,7 @@ call cancel_registration(1, 6, 2);
 -- select * from get_my_registrations(10);
 
 ----------------------------- CALL TO get potential Course to promote -----------------------------
--- select * from promote_courses();
+select * from promote_courses();
 
 ----------------------------- CALL TO VIEW MANAGERS' REPORT -----------------------------
 -- select * from view_manager_report();
