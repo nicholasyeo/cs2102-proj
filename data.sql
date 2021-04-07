@@ -344,8 +344,9 @@ call register_session(8, 11, 1, date '2020-07-02', 15, 1);
 call register_session(8, 12, 1, date '2020-07-03', 15, 1);
 call register_session(8, 13, 1, date '2020-07-04', 15, 1);
 
-Ian registers for courses under AI, Network and Algo 
+Ian registers for courses under AI, Network and Algo */
 call register_session(9, 11, 1, date '2020-07-02', 15, 0);
+ /*
 call register_session(9, 13, 1, date '2020-07-04', 15, 0);
 call register_session(9, 14, 1, date '2020-07-05', 15, 0);
 
@@ -462,7 +463,7 @@ call cancel_registration(1, 6, 2);
 -- select * from get_my_registrations(10);
 
 ----------------------------- CALL TO get potential Course to promote -----------------------------
--- select * from promote_courses();
+select * from promote_courses();
 
 ----------------------------- CALL TO VIEW MANAGERS' REPORT -----------------------------
 -- select * from view_manager_report();

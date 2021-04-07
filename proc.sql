@@ -736,7 +736,7 @@ declare
 				select customerId
 				from Redeems r2
 				where r1.customerId = r2.customerId and
-				(current_date - r2.courseSessionDate <= 6)
+				(current_date - interval '6 months') <= r2.courseSessionDate
 			)
 			union
 			select distinct customerId
@@ -745,7 +745,7 @@ declare
 				select customerId
 				from Pays p2
 				where p1.customerId = p2.customerId and
-				(current_date - p2.courseSessionDate <= 6)
+				(current_date - interval '6 months') <= p2.courseSessionDate
 			)            
 			order by customerId asc
 		), InactivePackageCustomers as (
@@ -1944,10 +1944,10 @@ BEGIN
         raise exception 'Customer already has an existing redemption of this offering' ;
     elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer has already paid for a session in this course offering';
-	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
-		raise exception 'The registration deadline for this course has passed!';
-	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
-		raise exception 'The registration for this course has not started yet!';
+--  	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+--  		raise exception 'The registration deadline for this course has passed!';
+--  	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+--  		raise exception 'The registration for this course has not started yet!';
     else
 		return new;
 	end if;
