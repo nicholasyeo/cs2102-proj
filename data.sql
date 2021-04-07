@@ -467,7 +467,7 @@ call cancel_registration(1, 6, 2);
 -- select * from get_my_registrations(10);
 
 ----------------------------- CALL TO get potential Course to promote -----------------------------
-select * from promote_courses();
+-- select * from promote_courses();
 
 ----------------------------- CALL TO VIEW MANAGERS' REPORT -----------------------------
 -- select * from view_manager_report();

@@ -1023,15 +1023,42 @@ begin
                         from CourseOfferings co1
                         where co1.courseId = m and co1.offeringId = n
                         ), 0.00::money);
+					
+					-- This is summing of late cancellation (no refund)
+					ccPayment := ccPayment + coalesce((
+                        select sum(courseFee)
+                        from CourseOfferings natural join Cancels
+                        where courseId = m and offeringId = n and paymentMode = 'pays'
+						and isEarlyCancellation = false
+                        ), 0.00::money);
 
+					-- This is summing of early cancellation (90% refund)
+					ccPayment := ccPayment + coalesce((
+                        select sum(courseFee - refundAmt)
+                        from CourseOfferings natural join Cancels
+                        where courseId = m and offeringId = n and paymentMode = 'pays'
+						and isEarlyCancellation = true
+                        ), 0.00::money);
+						
                     redemptionPayment = coalesce((
                         select sum(price/numSessions)
                         from (Redeems natural join CoursePackages) as rp
                         where rp.courseId = m and rp.offeringId = n
                     ), 0.00::money);
 					
+					-- This is summing up redemptions that were cancelled late
+					-- because this is counting as one redemption
+
+					redemptionPayment := redemptionPayment + coalesce((
+                        select sum(price/numSessions)
+                        from (Cancels natural join Purchases natural join CoursePackages) as cp
+                        where cp.courseId = m and cp.offeringId = n and isEarlyCancellation = false
+                    ), 0.00::money);
+					
+					
 					totalAmount := ccPayment + redemptionPayment;
 					net_registration_fee := net_registration_fee + totalAmount;
+					
                     if totalAmount > highestYet then
                         highestYet = totalAmount;
                         top_performing_courses = array(
@@ -1749,13 +1776,13 @@ BEGIN
         IF (oldStart > NEW.sessDate) THEN
             UPDATE CourseOfferings
             SET startDate = NEW.sessDate 
-            WHERE offeringId = NEW.offeringId;
+            WHERE offeringId = NEW.offeringId and courseId = new.courseId;
         END IF;
 
         IF (oldEnd < NEW.sessDate) THEN
             UPDATE CourseOfferings
             SET endDate = NEW.sessDate 
-            WHERE offeringId = NEW.offeringId;
+            WHERE offeringId = NEW.offeringId and courseId = new.courseId;
         END IF;
 		
 	ELSIF (TG_OP = 'DELETE') THEN 
