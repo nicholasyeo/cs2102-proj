@@ -211,7 +211,7 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 14, 4);
 	
 ----------------------------- CALL TO ADD CourseSession -----------------------------
--- _courseId integer, _launchDate date, _offeringId integer,  _weekday integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
+-- _courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
 --    _instructorId integer, _roomId integer
 
 call add_session(2, date '2021-02-01', 2, date '2023-02-02', 14, 1, 8, 1);  -- Test: session > offering endDate. Expect endDate of CourseOffering to change as well
