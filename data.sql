@@ -6,7 +6,7 @@ call add_employee('Derek'::text, 'SMU'::text, 90000004, 'derek@gmail.com'::text,
 call add_employee('Eric'::text, 'Hougang'::text, 90000005, 'eric@gmail.com'::text, 4000::money, null, current_date, 'manager'::text, array['Algorithms', 'Database', 'Outdated Course Area']);
 call add_employee('Felix'::text, 'Sengkang'::text, 90000006, 'felix@gmail.com'::text, 2000::money, null, current_date, 'manager'::text, array['Artificial Intelligence', 'Software Engineering']);
 call add_employee('Gerald'::text, 'Punggol'::text, 90000007, 'gerald@gmail.com'::text, 2500::money, null, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Database', 'Software Engineering', 'Network']);
-call add_employee('Harry'::text, 'Woodlands'::text, 90000008, 'harry@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Software Engineering']);
+call add_employee('Harry'::text, 'Woodlands'::text, 90000008, 'harry@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Software Engineering','Security']);
 call add_employee('Ivy'::text, 'Kovan'::text, 90000009, 'ivy@gmail.com'::text, null, 15::money, current_date, 'instructor'::text, array['Network', 'Artificial Intelligence', 'Algorithms', 'Software Engineering']);
 call add_employee('Jay'::text, 'Serangoon'::text, 90000010, 'jay@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Network', 'Outdated Course Area', 'Database']);
 
@@ -101,7 +101,45 @@ VALUES (50, 5, 1);
 --						IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, 
 --						IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
 
---call add_course_offering (3,2,120::MONEY, '2021-04-20'::DATE, '2021-05-21'::DATE, 3, 100, ARRAY['2021-07-27', '2021-07-28'::DATE], ARRAY[9,9], ARRAY[6,6]);
+ call add_course_offering (2,1,150::MONEY, '2021-01-10'::DATE, 
+ 						  '2021-07-20'::DATE, 2, 100, 
+ 						  ARRAY['2021-08-02', '2021-08-10', '2021-08-20'::DATE], ARRAY[10,9,15], ARRAY[3,4,5]);
+						  
+ call add_course_offering (3,1,200::MONEY, '2021-03-15'::DATE, 
+ 						 '2021-10-15'::DATE, 2, 150, 
+ 						  ARRAY['2021-10-26', '2021-10-28', '2021-11-05', '2021-11-08'::DATE], ARRAY[11,9,15,14], ARRAY[5,9,2,6]);
+
+-- call add_course_offering (1,2,100::MONEY, '2021-01-31'::DATE, 
+  						--   '2021-05-05'::DATE, 3, 80, 
+  						--   ARRAY['2021-05-18', '2021-05-21','2021-05-27'::DATE], ARRAY[9,10,14], ARRAY[7,8,4]);
+
+ call add_course_offering (2,3,150::MONEY, '2021-02-17'::DATE, 
+  						  '2021-08-20'::DATE, 3, 110, 
+  						  ARRAY['2021-09-02', '2021-09-06', '2021-09-10'::DATE], ARRAY[10,14,15], ARRAY[2,6,8]);
+
+ call add_course_offering (3,3,200::MONEY, '2021-03-18'::DATE, 
+  						  '2021-09-25'::DATE, 2, 150, 
+  						  ARRAY['2021-10-05', '2021-10-07', '2021-10-15' ::DATE], ARRAY[9,10,11], ARRAY[10,4,4]);
+
+
+ call add_course_offering (2,4,150::MONEY, '2021-03-10'::DATE, 
+   						  '2021-08-20'::DATE, 2, 150, 
+  						  ARRAY['2021-09-06', '2021-09-07', '2021-09-14' ::DATE], ARRAY[9,10,14], ARRAY[6,6,5]);			  
+ call add_course_offering (3,4,200::MONEY, '2021-04-03'::DATE, 
+   						  '2021-09-13'::DATE, 2, 100, 
+   						  ARRAY['2021-09-24', '2021-09-27'::DATE], ARRAY[10,14], ARRAY[4,5]);					  
+
+ call add_course_offering (2,5,150::MONEY, '2021-02-10'::DATE, 
+   						  '2021-07-15'::DATE, 2, 70, 
+   						  ARRAY['2021-08-02', '2021-08-05', '2021-08-10' ::DATE], ARRAY[9,10,14], ARRAY[9,5,1]);
+
+ call add_course_offering (1,6,100::MONEY, '2021-01-15'::DATE, 
+   						  '2021-05-07'::DATE, 3, 100, 
+   						  ARRAY['2021-05-20', '2021-05-25', '2021-05-27' ::DATE], ARRAY[11,14,15], ARRAY[6,3,7]);
+	
+-- call add_course_offering (1,9,100::MONEY, '2021-03-16'::DATE, 
+  						--   '2021-06-13'::DATE, 3, 90, 
+  						--   ARRAY['2021-06-25', '2021-06-26', '2021-06-27' ::DATE], ARRAY[19,14,9], ARRAY[9,10,10]);
 
 ----------------------------- MANUALLY ADD CourseOfferings  -----------------------------
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
