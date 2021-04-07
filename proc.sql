@@ -1267,6 +1267,67 @@ BEGIN
 END;
 $$ language plpgsql;
 
+--28. popular_courses
+
+CREATE OR REPLACE FUNCTION popular_courses () 
+RETURNS TABLE (courseId INT, courseTitle TEXT, areaName TEXT, numOfferings INT, numRegistrations INT)
+AS $$
+DECLARE
+	currYear INT;
+	curs CURSOR FOR (SELECT * FROM Courses);
+	r RECORD;
+	temprow RECORD;
+	countOfferings INT;
+	countReg INT;
+	prevReg INT;
+	counter INT;
+BEGIN
+	currYear := (SELECT EXTRACT(YEAR FROM CURRENT_TIMESTAMP));
+	OPEN curs;
+	LOOP 
+		FETCH curs INTO r;
+		EXIT WHEN NOT FOUND;
+		
+		countOfferings := 0;
+		prevReg := 0;
+		
+		SELECT COUNT(offeringId) INTO countOfferings
+		FROM CourseOfferings co
+		WHERE co.courseId = r.courseId AND currYear = EXTRACT(YEAR FROM co.launchDate);
+		
+		IF (countOfferings >= 2) THEN 
+			counter := 0;
+			FOR temprow IN 
+				SELECT * 
+				FROM CourseOfferings co LEFT JOIN CountRegistrations crg ON co.offeringId = crg.offeringId
+				WHERE co.courseId = r.courseId AND currYear = EXTRACT(YEAR FROM co.startDate)
+				ORDER BY co.startDate ASC
+			LOOP
+				IF (temprow.totalRegistration IS NULL OR temprow.totalRegistration <= prevReg) THEN
+					EXIT;
+				ELSE
+					countReg := temprow.totalRegistration + prevReg;
+					prevReg := temprow.totalRegistration;
+					counter := counter + 1;
+				END IF;
+				
+				IF (counter = countOfferings) THEN
+					courseId := r.courseId;
+					courseTitle := r.courseTitle;
+					areaName := r.areName;
+					numOfferings := countOfferings;
+					numRegistrations := countReg;
+					RETURN NEXT;
+				END IF;
+			END LOOP;
+		END IF;
+		
+	END LOOP;
+	CLOSE curs;
+	
+END;
+$$ LANGUAGE plpgsql;
+
 -------------------------------- TRIGGERS -----------------------------------
 
 -- Trigger to capture the constraint that if a person is an employee, he has to be either a part-timer or full-timer,
