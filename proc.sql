@@ -931,6 +931,7 @@ declare
     n int;
     ccPayment money;
     redemptionPayment money;
+	cancelledPayment money;
 	totalAmount money;
     highestYet money;
     top_performing_courses text[];
@@ -960,6 +961,7 @@ begin
         foreach i in array managedAreas
         loop
             -- Array of courses corresponding to course area Y, managed by manager X
+			raise notice 'Managed Area: %', i;
             courseArr = array (
                 select courseId
                 from Courses c
@@ -979,25 +981,57 @@ begin
                 -- loop over every offering of course Z of course area Y that is managed by manager X
                 foreach n in array offeringArr
                 loop
+					raise notice 'Manager ID: %', r.employeeId;
+					raise notice 'Course ID: %', m;
+					raise notice 'Offering ID: %', n;
 					offering_ending_this_year := offering_ending_this_year + 1;
 					
 					select numEnrolled into enrollment
 					from PayAttendance oa
 					where oa.courseId = m and oa.offeringId = n;
                         
-                    ccPayment = coalesce((
+                    ccPayment := coalesce((
                         select courseFee * enrollment
                         from CourseOfferings co1
                         where co1.courseId = m and co1.offeringId = n
                         ), 0.00::money);
-
-                    redemptionPayment = coalesce((
+					
+					-- This is summing of late cancellation (no refund)
+					ccPayment := ccPayment + coalesce((
+                        select sum(courseFee)
+                        from CourseOfferings natural join Cancels
+                        where courseId = m and offeringId = n and paymentMode = 'pays'
+						and isEarlyCancellation = false
+                        ), 0.00::money);
+					
+					-- This is summing of early cancellation (90% refund)
+					ccPayment := ccPayment + coalesce((
+                        select sum(courseFee - refundAmt)
+                        from CourseOfferings natural join Cancels
+                        where courseId = m and offeringId = n and paymentMode = 'pays'
+						and isEarlyCancellation = true
+                        ), 0.00::money);
+						
+                    redemptionPayment := coalesce((
                         select sum(price/numSessions)
                         from (Redeems natural join CoursePackages) as rp
                         where rp.courseId = m and rp.offeringId = n
                     ), 0.00::money);
 					
+					raise notice 'Redemption final amount: %', redemptionPayment;
+					raise notice 'Payment final amount: %', ccPayment;
+					
+					-- This is summing up redemptions that were cancelled late
+					-- because this is counting as one redemption
+					
+					redemptionPayment := redemptionPayment + coalesce((
+                        select sum(price/numSessions)
+                        from (Cancels natural join Purchases natural join CoursePackages) as cp
+                        where cp.courseId = m and cp.offeringId = n and isEarlyCancellation = false
+                    ), 0.00::money);
+					
 					totalAmount := ccPayment + redemptionPayment;
+					
 					net_registration_fee := net_registration_fee + totalAmount;
                     if totalAmount > highestYet then
                         highestYet = totalAmount;
@@ -1246,12 +1280,12 @@ BEGIN
 		RAISE EXCEPTION 'Course Offering not found.';
 	END IF;
 	
-    IF _courseSessionDate >= registDeadline + 10 THEN
+--     IF _courseSessionDate >= registDeadline + 10 THEN
         insert into CourseSessions (courseId, launchDate, offeringId, sessDate, sessHour, weekday, sessionId, employeeId, roomId)
         values (_courseId, _launchDate, _offeringId, _courseSessionDate, _courseSessionHour, _weekday, _sessionId, _instructorId, _roomId);
-	ELSE 
-		RAISE EXCEPTION 'Session date must be at least 10 days after registration deadline.';
-    END IF;
+-- 	ELSE 
+-- 		RAISE EXCEPTION 'Session date must be at least 10 days after registration deadline.';
+--     END IF;
 
     IF _courseSessionDate < sDate THEN
         update CourseOfferings
@@ -1458,13 +1492,13 @@ BEGIN
         IF (oldStart > NEW.sessDate) THEN
             UPDATE CourseOfferings
             SET startDate = NEW.sessDate 
-            WHERE offeringId = NEW.offeringId;
+            WHERE courseId = new.courseId and offeringId = NEW.offeringId;
         END IF;
 
         IF (oldEnd < NEW.sessDate) THEN
             UPDATE CourseOfferings
             SET endDate = NEW.sessDate 
-            WHERE offeringId = NEW.offeringId;
+            WHERE courseId = new.courseId and offeringId = NEW.offeringId;
         END IF;
 		
 	ELSIF (TG_OP = 'DELETE') THEN 
@@ -1575,6 +1609,7 @@ CREATE TRIGGER update_seatingcapacity_trigger
 AFTER INSERT OR UPDATE OR DELETE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION update_seatingcapacity_func();
 
+/*
 -- Trigger to ensure registration deadline is 10 days before start date
 
 CREATE OR REPLACE FUNCTION regDeadline_offering_func() RETURNS TRIGGER 
@@ -1595,7 +1630,7 @@ $$ LANGUAGE PLPGSQL;
 CREATE TRIGGER regDeadline_offering_trigger
 BEFORE INSERT OR UPDATE ON CourseOfferings 
 FOR EACH ROW EXECUTE FUNCTION regDeadline_offering_func();
-
+*/
 CREATE OR REPLACE FUNCTION parttimers_hours_func() RETURNS TRIGGER
 AS $$
 DECLARE
