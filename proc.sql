@@ -582,14 +582,14 @@ begin
 
         -- Count the total number of registrations for this
         -- particular CourseSession
-        select count(redeemId) into totalRedemption
+        select count(*) into totalRedemption
         from Redeems
         where r.courseId = courseId AND
         r.offeringId = offeringId AND
         r.sessDate = courseSessionDate AND
         r.sessHour = courseSessionHour;
 		
-		select count(paymentId) into totalPayment
+		select count(*) into totalPayment
         from Pays
         where r.courseId = courseId AND
         r.offeringId = offeringId AND
