@@ -1231,19 +1231,24 @@ END;
 $$ language plpgsql;
 
 -- 24. add_session
-create or replace procedure add_session(_courseId integer, _launchDate date, _offeringId integer,  _weekday integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
+create or replace procedure add_session(_courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
     _instructorId integer, _roomId integer)
 as $$
 DECLARE
     registDeadline date;
 	sDate date;
     eDate date;
+    _weekday integer;
 BEGIN
     select registrationDeadline, startDate, endDate into registDeadline, sDate, eDate from CourseOfferings where courseId = _courseId 
         and launchDate = _launchDate and offeringId = _offeringId;
+    
+    SELECT EXTRACT(DOW FROM _courseSessionDate) INTO _weekday;
  	
 	IF registDeadline is NULL or sDate is NULL THEN
 		RAISE EXCEPTION 'Course Offering not found.';
+    ELSEIF (_weekday not in (1,2,3,4,5)) THEN
+        RAISE EXCEPTION 'Day of the course session must be on a weekday.';
 	END IF;
 	
     IF _courseSessionDate >= registDeadline + 10 THEN
