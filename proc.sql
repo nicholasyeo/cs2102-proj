@@ -769,7 +769,7 @@ declare
 				select customerId
 				from Redeems r2
 				where r1.customerId = r2.customerId and
-				(current_date - r2.courseSessionDate <= 6)
+				(current_date - interval '6 months') <= r2.courseSessionDate
 			)
 			union
 			select distinct customerId
@@ -778,7 +778,7 @@ declare
 				select customerId
 				from Pays p2
 				where p1.customerId = p2.customerId and
-				(current_date - p2.courseSessionDate <= 6)
+				(current_date - interval '6 months') <= p2.courseSessionDate
 			)            
 			order by customerId asc
 		), InactivePackageCustomers as (
@@ -1264,19 +1264,24 @@ END;
 $$ language plpgsql;
 
 -- 24. add_session
-create or replace procedure add_session(_courseId integer, _launchDate date, _offeringId integer,  _weekday integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
+create or replace procedure add_session(_courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
     _instructorId integer, _roomId integer)
 as $$
 DECLARE
     registDeadline date;
 	sDate date;
     eDate date;
+    _weekday integer;
 BEGIN
     select registrationDeadline, startDate, endDate into registDeadline, sDate, eDate from CourseOfferings where courseId = _courseId 
         and launchDate = _launchDate and offeringId = _offeringId;
+    
+    SELECT EXTRACT(DOW FROM _courseSessionDate) INTO _weekday;
  	
 	IF registDeadline is NULL or sDate is NULL THEN
 		RAISE EXCEPTION 'Course Offering not found.';
+    ELSEIF (_weekday not in (1,2,3,4,5)) THEN
+        RAISE EXCEPTION 'Day of the course session must be on a weekday.';
 	END IF;
 	
     IF _courseSessionDate >= registDeadline + 10 THEN
@@ -2230,10 +2235,10 @@ BEGIN
         raise exception 'Customer already has an existing redemption of this offering' ;
     elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer has already paid for a session in this course offering';
-	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
-		raise exception 'The registration deadline for this course has passed!';
-	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
-		raise exception 'The registration for this course has not started yet!';
+--  	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+--  		raise exception 'The registration deadline for this course has passed!';
+--  	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+--  		raise exception 'The registration for this course has not started yet!';
     else
 		return new;
 	end if;
