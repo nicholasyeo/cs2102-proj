@@ -1,17 +1,21 @@
 ----------------------------- CALLS TO ADD EMPLOYEES -----------------------------
-call add_employee('Alice'::text, 'NUS'::text, 90000001, 'alice@gmail.com'::text, 2000::money, null, current_date, 'manager'::text, array['Network', 'Security']);
-call add_employee('Bob'::text, 'NUS'::text, 90000002, 'bob@gmail.com'::text, 3000::money, null, current_date, 'administrator'::text, array[]::text[]);
-call add_employee('Charlie'::text, 'NTU'::text, 90000003, 'charlie@gmail.com'::text, 2500::money, null, current_date, 'administrator'::text, array[]::text[]);
-call add_employee('Derek'::text, 'SMU'::text, 90000004, 'derek@gmail.com'::text, 4000::money, null, current_date, 'administrator'::text, array[]::text[]);
-call add_employee('Eric'::text, 'Hougang'::text, 90000005, 'eric@gmail.com'::text, 4000::money, null, current_date, 'manager'::text, array['Algorithms', 'Database', 'Outdated Course Area']);
-call add_employee('Felix'::text, 'Sengkang'::text, 90000006, 'felix@gmail.com'::text, 2000::money, null, current_date, 'manager'::text, array['Artificial Intelligence', 'Software Engineering']);
-call add_employee('Gerald'::text, 'Punggol'::text, 90000007, 'gerald@gmail.com'::text, 2500::money, null, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Database', 'Software Engineering', 'Network']);
-call add_employee('Harry'::text, 'Woodlands'::text, 90000008, 'harry@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Software Engineering','Security']);
-call add_employee('Ivy'::text, 'Kovan'::text, 90000009, 'ivy@gmail.com'::text, null, 15::money, current_date, 'instructor'::text, array['Network', 'Artificial Intelligence', 'Algorithms', 'Software Engineering']);
-call add_employee('Jay'::text, 'Serangoon'::text, 90000010, 'jay@gmail.com'::text, null, 20::money, current_date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Network', 'Outdated Course Area', 'Database']);
+call add_employee('Alice'::text, 'NUS'::text, 90000001, 'alice@gmail.com'::text, 2000::money, null, '2021-02-04'::date, 'manager'::text, array['Network', 'Security']);
+call add_employee('Bob'::text, 'NUS'::text, 90000002, 'bob@gmail.com'::text, 3000::money, null, '2021-02-04'::date, 'administrator'::text, array[]::text[]);
+call add_employee('Charlie'::text, 'NTU'::text, 90000003, 'charlie@gmail.com'::text, 2500::money, null, '2021-02-04'::date, 'administrator'::text, array[]::text[]);
+call add_employee('Derek'::text, 'SMU'::text, 90000004, 'derek@gmail.com'::text, 4000::money, null, '2021-02-04'::date, 'administrator'::text, array[]::text[]);
+call add_employee('Eric'::text, 'Hougang'::text, 90000005, 'eric@gmail.com'::text, 4000::money, null, '2021-03-04'::date, 'manager'::text, array['Algorithms', 'Database', 'Outdated Course Area']);
+call add_employee('Felix'::text, 'Sengkang'::text, 90000006, 'felix@gmail.com'::text, 2000::money, null, '2021-03-04'::date, 'manager'::text, array['Artificial Intelligence', 'Software Engineering']);
+call add_employee('Gerald'::text, 'Punggol'::text, 90000007, 'gerald@gmail.com'::text, 2500::money, null, '2021-03-04'::date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Database', 'Software Engineering', 'Network']);
+call add_employee('Harry'::text, 'Woodlands'::text, 90000008, 'harry@gmail.com'::text, 3000::money, null, '2021-03-04'::date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Software Engineering','Security']);
+call add_employee('Ivy'::text, 'Kovan'::text, 90000009, 'ivy@gmail.com'::text, null, 15::money, '2021-04-07'::date, 'instructor'::text, array['Network', 'Artificial Intelligence', 'Algorithms', 'Software Engineering']);
+call add_employee('Jay'::text, 'Serangoon'::text, 90000010, 'jay@gmail.com'::text, null, 20::money, '2021-04-07'::date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence', 'Network', 'Outdated Course Area', 'Database']);
+call add_employee('Kelvin'::text, 'Serangoon'::text, 90000011, 'kelvin@gmail.com'::text, null, 20::money, '2021-04-07'::date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence']);
+call add_employee('Larry'::text, 'Serangoon'::text, 90000012, 'larry@gmail.com'::text, null, 25::money, '2021-04-07'::date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence']);
 
 ----------------------------- CALLS TO REMOVE EMPLOYEES -----------------------------
 call remove_employee(2, date '2021-06-01');
+call remove_employee(3, date '2021-03-15');
+call remove_employee(11, date '2021-04-22');
 
 ----------------------------- CALLS TO ADD CUSTOMERS -----------------------------
 call add_customer('Alex', 'Sengkang', 80000001, 'alex@gmail.com', '0000 0000 0000 0000', date '2025-01-01', '000');

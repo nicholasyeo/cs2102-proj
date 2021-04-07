@@ -117,6 +117,39 @@ create or replace procedure add_course(cTitle text, cDescription text,
     values (cDescription, duration, cTitle, cArea);
 $$ language sql;
 
+-- 6. find_instructors
+create or replace function find_instructors(cid integer, sessionDate date,
+    sessionHour integer) returns table(eid integer, employeeName text) as $$
+declare
+    courseDuration integer;
+    courseArea text;
+begin
+    select duration into courseDuration from Courses where courseId = cid;
+    select areaName into courseArea from Courses where courseId = cid;
+    return query (
+        select employeeId, ename
+        from Specialises natural join Employees
+        where areaName = courseArea
+        and employeeId not in (
+            select employeeId
+            from CourseSessions natural join Courses
+            where sessDate = sessionDate and (
+                sessHour = sessionHour -- cannot teach another session in this hour
+                or (sessHour + duration >= sessionHour and sessHour < sessionHour) -- cannot teach back to back
+                or (sessHour <= sessionHour + courseDuration and sessHour > sessionHour) -- cannot teach back to back
+            )
+        ) and (employeeId in (select employeeId from FullTimers) -- Employee is full-timer; ok
+            or employeeId in ( -- Employee is part-timer; cannot work > 30 hours
+                select employeeId
+                from PartTimers natural left outer join (CourseSessions natural join Courses)
+                group by employeeId
+                having coalesce(sum(duration), 0) + courseDuration <= 30
+            )
+        )
+    );
+end;
+$$ language plpgsql;
+
 -- 7. get_available_instructors //done
 CREATE OR REPLACE FUNCTION get_available_instructors(IN course INT, IN startDate DATE, IN endDate DATE) 
 RETURNS TABLE (employeeId INT, instructorName TEXT, monthlyHours INT, selectedDay DATE, selectedHours INT[]) 
@@ -1267,8 +1300,75 @@ BEGIN
 END;
 $$ language plpgsql;
 
---28. popular_courses
+-- 25. pay_salary
+create or replace function pay_salary()
+returns table(eid integer, ename text, eStatus text, numDays integer, numHours integer,
+hourlyRate money, monthlySalary money, salaryAmount money) as $$
+declare
+    curs cursor for (
+        select * from Employees
+        where departDate is null
+        or (extract(month from departDate) = extract(month from current_date) 
+            and extract(year from departDate) = extract(year from current_date))
+        or departDate >= current_date
+        order by employeeId
+    );
+    r record;
+    firstWorkDay integer;
+    lastWorkDay integer;
+    currentMonth integer;
+    numDaysForMonth integer;
+begin
+    currentMonth := extract(month from current_date);
+    numDaysForMonth := extract(day from date_trunc('month',now()) + interval '1 month - 1 day');
+    open curs;
+    loop
+        fetch curs into r;
+        exit when not found;
+        eid := r.employeeId;
+        ename := r.ename;
+        if eid in (select employeeId from FullTimers) then
+            eStatus := 'full-time';
+            numHours := null;
+            hourlyRate := null;
+            
+            if extract(month from r.joinDate) = currentMonth then
+                firstWorkDay := extract(day from r.joinDate);
+            else
+                firstWorkDay := 1;
+            end if;
 
+            if r.departDate is null then -- Employee has not departed
+                lastWorkDay := numDaysForMonth;
+            elsif extract(month from r.departDate) = currentMonth then -- Employee departing in current month
+                lastWorkDay := extract(day from r.departDate);
+            else -- Employee departing soon, in future months
+                lastWorkDay := numDaysForMonth;
+            end if;
+            
+            numDays := lastWorkDay - firstWorkDay + 1;
+            select F.monthlySalary into monthlySalary from FullTimers F where F.employeeId = eid;
+            salaryAmount := (numDays::numeric / numDaysForMonth) * monthlySalary;
+            insert into FTSalaries values (eid, current_date, numDays, salaryAmount);
+        else -- Employee is a part-timer
+            eStatus := 'part-time';
+            numDays := null;
+            monthlySalary := null;
+            select coalesce(sum(duration), 0) into numHours from CourseSessions natural join Courses
+                where employeeId = eid and
+                extract(month from sessDate) = currentMonth and
+                extract(year from sessDate) = extract(year from current_date);
+            select P.hourlyRate into hourlyRate from PartTimers P where P.employeeId = eid;
+            salaryAmount := hourlyRate * numHours;
+            insert into PTSalaries values (eid, current_date, numHours, salaryAmount);
+        end if;
+        return next;
+    end loop;
+    close curs;
+end;
+$$ language plpgsql;
+
+--28. popular_courses
 CREATE OR REPLACE FUNCTION popular_courses () 
 RETURNS TABLE (courseId INT, courseTitle TEXT, areaName TEXT, numOfferings INT, numRegistrations INT)
 AS $$
@@ -1327,6 +1427,63 @@ BEGIN
 	
 END;
 $$ LANGUAGE plpgsql;
+
+-- 29. view_summary_report
+create or replace function view_summary_report(months integer)
+returns table(r_month integer, r_year integer, totalSalary money, totalPackageSales money,
+totalRegistrationFees money, totalRefundedFees money, totalCourseRedemptions integer) as $$
+declare
+    i integer;
+    partTimerSalaries money;
+    fullTimerSalaries money;
+begin
+    i := 0;
+    r_month := extract(month from current_date);
+    r_year := extract(year from current_date);
+    loop
+        exit when i >= months;
+
+        select coalesce(sum(salaryAmount), 0::money) into partTimerSalaries from PTSalaries
+            where extract(month from paymentDate) = r_month
+            and extract(year from paymentDate) = r_year;
+        select coalesce(sum(salaryAmount), 0::money) into fullTimerSalaries from FTSalaries
+            where extract(month from paymentDate) = r_month
+            and extract(year from paymentDate) = r_year;
+        totalSalary := partTimerSalaries + fullTimerSalaries;
+
+        select coalesce(sum(price), 0::money) into totalPackageSales
+            from Purchases natural join CoursePackages
+            where extract(month from purchaseDate) = r_month
+            and extract(year from purchaseDate) = r_year;
+        
+        select coalesce(sum(courseFee), 0::money) into totalRegistrationFees
+            from Pays natural join CourseOfferings
+            where extract(month from paymentDate) = r_month
+            and extract(year from paymentDate) = r_year;
+        
+        select coalesce(sum(refundAmt), 0::money) into totalRefundedFees
+            from Cancels
+            where extract(month from cancellationTimestamp) = r_month
+            and extract(year from cancellationTimestamp) = r_year;
+        
+        select count(*) into totalCourseRedemptions
+            from Redeems
+            where extract(month from redeemDate) = r_month
+            and extract(year from redeemDate) = r_year;
+        
+        return next;
+
+        -- Sets the next month to query
+        if r_month - 1 = 0 then
+            r_month := 12;
+            r_year := r_year - 1;
+        else
+            r_month := r_month - 1;
+        end if;
+        i := i + 1;
+    end loop;
+end;
+$$ language plpgsql;
 
 -------------------------------- TRIGGERS -----------------------------------
 
@@ -1437,9 +1594,138 @@ create trigger admin_fulltimer_trigger
 before insert or update on Administrators
 for each row execute function manager_admin_fulltimer_function();
 
+-- Trigger to ensure that an employee's depart date is not before the join date, and departure conditions are fulfilled.
+create or replace function employee_depart_date_function()
+returns trigger as $$
+begin
+    if (new.departDate is not null and new.departDate < new.joinDate) then
+        raise exception 'Departure date of employee cannot be before join date.';
+    end if;
+    
+    if new.departDate is not null and (new.departDate < any (
+        select registrationDeadline from CourseOfferings CO where CO.employeeId = new.employeeId
+    ) or new.departDate < any (
+        select sessDate from CourseSessions CS where CS.employeeId = new.employeeId
+    ) or new.employeeId in (select employeeId from CourseAreas)) then
+        raise exception 'The conditions required to remove employee is not fulfilled.';
+    end if;
+
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger employee_depart_date_trigger
+before insert or update on Employees
+for each row execute function employee_depart_date_function();
+
+-- Trigger to ensure valid records are inserted into FTSalaries table
+create or replace function fulltimer_salaries_function()
+returns trigger as $$
+declare
+    dateJoined date;
+    dateDeparted date;
+    firstWorkDay integer;
+    lastWorkDay integer;
+    numDaysWorked integer;
+    currentMonth integer;
+    currentYear integer;
+    numDaysForMonth integer;
+    monthlySalary money;
+    salaryAmount money;
+begin
+    currentMonth := extract(month from new.paymentDate);
+    currentYear := extract(year from new.paymentDate);
+    numDaysForMonth := extract(day from date_trunc('month',new.paymentDate) + interval '1 month - 1 day');
+    select joinDate, departDate into dateJoined, dateDeparted from Employees E where E.employeeId = new.employeeId;
+
+    if dateDeparted is not null
+    and (extract(year from dateDeparted) <> currentYear or extract(month from dateDeparted) <> currentMonth) 
+    and dateDeparted < new.paymentDate then
+        raise exception 'Employee has already departed before the start of the current month.';
+        return null;
+    end if;
+
+    if extract(month from dateJoined) = currentMonth then
+        firstWorkDay := extract(day from dateJoined);
+    else
+        firstWorkDay := 1;
+    end if;
+
+    if dateDeparted is null then -- Employee has not departed
+        lastWorkDay := numDaysForMonth;
+    elsif extract(month from dateDeparted) = currentMonth then -- Employee departing in current month
+        lastWorkDay := extract(day from dateDeparted);
+    else -- Employee departing soon, in future months
+        lastWorkDay := numDaysForMonth;
+    end if;
+    
+    numDaysWorked := lastWorkDay - firstWorkDay + 1;
+    if numDaysWorked <> new.numDays then
+        raise exception 'Attempt to add invalid record: numDays column is incorrect.';
+        return null;
+    end if;
+    
+    select F.monthlySalary into monthlySalary from FullTimers F where F.employeeId = new.employeeId;
+    salaryAmount := (numDaysWorked::numeric / numDaysForMonth) * monthlySalary;
+    if salaryAmount <> new.salaryAmount then
+        raise exception 'Attempt to add invalid record: salaryAmount column is incorrect.';
+        return null;
+    end if;
+
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger fulltimer_salaries_trigger
+before insert or update on FTSalaries
+for each row execute function fulltimer_salaries_function();
+
+-- Trigger to ensure valid records are inserted into PTSalaries table.
+create or replace function parttimer_salaries_function()
+returns trigger as $$
+declare
+    dateDeparted date;
+    currentMonth integer;
+    currentYear integer;
+    numHoursWorked integer;
+    hourlyRate money;
+    salaryAmount money;
+begin
+    currentMonth := extract(month from new.paymentDate);
+    currentYear := extract(year from new.paymentDate);
+    if dateDeparted is not null
+    and (extract(year from dateDeparted) <> currentYear or extract(month from dateDeparted) <> currentMonth) 
+    and dateDeparted < new.paymentDate then
+        raise exception 'Employee has already departed before the start of the current month.';
+        return null;
+    end if;
+
+    select coalesce(sum(duration), 0) into numHoursWorked
+    from CourseSessions natural join Courses
+    where employeeId = new.employeeId 
+    and extract(month from sessDate) = currentMonth and extract(year from sessDate) = currentYear;
+    if numHoursWorked <> new.numHours then
+        raise exception 'Attempt to add invalid record: numHours column is incorrect.';
+        return null;
+    end if;
+    
+    select P.hourlyRate into hourlyRate from PartTimers P where P.employeeId = new.employeeId;
+    salaryAmount := hourlyRate * numHoursWorked;
+    if salaryAmount <> new.salaryAmount then
+        raise exception 'Attempt to add invalid record: salaryAmount column is incorrect.';
+        return null;
+    end if;
+
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger parttimer_salaries_trigger
+before insert or update on PTSalaries
+for each row execute function parttimer_salaries_function();
+
 
 --Trigger to ensure course offering start and end date attributes match sessions start and end dates
-
 CREATE OR REPLACE FUNCTION offering_dates_func() RETURNS TRIGGER 
 AS $$
 DECLARE 
