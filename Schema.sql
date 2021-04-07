@@ -193,20 +193,18 @@ create table Purchases (
 );
 
 create table Pays (
-	paymentId				integer generated always as identity,
 	customerId				integer,
 	courseId				integer,
 	offeringId				integer,
 	courseSessionDate		date,
 	courseSessionHour		integer,
 	paymentDate 			date not null,
-	primary key (paymentId, customerId, courseId, offeringId, courseSessionDate, courseSessionHour),
+	primary key (customerId, courseId, offeringId, courseSessionDate, courseSessionHour),
 	foreign key (customerId) references Customers (customerId) on update cascade,
 	foreign key (courseId, offeringId, courseSessionDate, courseSessionHour) references CourseSessions (courseId, offeringId, sessDate, sessHour)  on update cascade
 );
 
 create table Redeems (
-	redeemId 				integer generated always as identity,
 	customerId 				integer,
 	packageId 				integer,
 	purchaseDate 			date,
@@ -215,7 +213,7 @@ create table Redeems (
 	courseSessionDate 		date,
 	courseSessionHour 		integer,
 	redeemDate 				date not null,
-	primary key (redeemId, customerId, packageId, purchaseDate, courseId, offeringId, courseSessionDate, courseSessionHour),
+	primary key (customerId, packageId, purchaseDate, courseId, offeringId, courseSessionDate, courseSessionHour),
 	foreign key (customerId, packageId, purchaseDate) references Purchases (customerId, packageId, purchaseDate)  on update cascade,
 	foreign key (courseId, offeringId, courseSessionDate, courseSessionHour) references CourseSessions (courseId, offeringId, sessDate, sessHour)  on update cascade
 );
