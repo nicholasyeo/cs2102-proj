@@ -113,9 +113,9 @@ VALUES (50, 5, 1);
 ----------------------------- MANUALLY ADD CourseOfferings  -----------------------------
 
 --course 1, offering 1
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-16', 'available', 100 , '2021-07-01', '2021-07-20', 1, 2);
+call add_course_offering (1,1,100::MONEY, '2021-01-01'::DATE, 
+						'2021-06-16'::DATE, 2, 50, 
+						ARRAY['2021-07-01'::DATE], ARRAY[10], ARRAY[1]);
 
 --course 1, offering 2
 call add_course_offering (2,1,150::MONEY, '2021-01-10'::DATE, 
@@ -133,14 +133,14 @@ call add_course_offering (1,2,100::MONEY, '2021-01-31'::DATE,
   						  ARRAY['2021-05-18', '2021-05-21','2021-05-27'::DATE], ARRAY[9,10,14], ARRAY[7,8,4]);
 
 --course 2, offering 2	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (2, '2021-02-01', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
+call add_course_offering (2,2,99::MONEY, '2021-02-01'::DATE, 
+  						  '2021-06-14'::DATE, 3, 100, 
+  						  ARRAY['2023-02-02'::DATE], ARRAY[14], ARRAY[1]);
 
 --course 3, offering 1
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-17', 'available', 125 , '2021-07-02', '2021-07-20', 3, 2);
+call add_course_offering (1,3,100::MONEY, '2021-01-01'::DATE, 
+  						  '2021-06-17'::DATE, 2, 50, 
+  						  ARRAY['2021-07-15'::DATE], ARRAY[15], ARRAY[3]);
 
 --course 3, offering 2
 call add_course_offering (2,3,150::MONEY, '2021-02-17'::DATE, 
@@ -153,9 +153,9 @@ call add_course_offering (2,3,150::MONEY, '2021-02-17'::DATE,
   						  ARRAY['2021-10-05', '2021-10-07', '2021-10-15' ::DATE], ARRAY[9,10,11], ARRAY[10,4,4]);
 
 --course 4, offering 1
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-18', 'available', 150 , '2021-07-03', '2021-07-20', 4, 2);
+ call add_course_offering (1,4,100::MONEY, '2021-01-01'::DATE, 
+  						  '2021-06-18'::DATE, 2, 50, 
+  						  ARRAY['2021-07-16' ::DATE], ARRAY[15], ARRAY[2]);
 
 -- course 4, offering 2
  call add_course_offering (2,4,150::MONEY, '2021-03-10'::DATE, 
@@ -242,13 +242,13 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 -- _courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
 --    _instructorId integer, _roomId integer
 
-call add_session(2, date '2021-02-01', 2, date '2023-02-02', 14, 1, 8, 1);  -- Test: session > offering endDate. Expect endDate of CourseOffering to change as well
+-- call add_session(2, date '2021-02-01', 2, date '2023-02-02', 14, 1, 8, 1);  -- Test: session > offering endDate. Expect endDate of CourseOffering to change as well
 
 call add_session(2, date '2021-02-02', 3, date '2023-02-03', 10, 1, 8, 1);
-call add_session(1, date '2021-01-01', 1, date '2021-07-01', 10, 1, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
-call add_session(1, date '2021-01-01', 1, date '2021-07-16', 15, 2, 7, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
-call add_session(3, date '2021-01-01', 1, date '2021-07-15', 15, 1, 9, 3); 
-call add_session(4, date '2021-01-01', 1, date '2021-07-16', 15, 1, 10, 2); 
+-- call add_session(1, date '2021-01-01', 1, date '2021-07-01', 10, 1, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
+call add_session(1, date '2021-01-01', 1, date '2021-07-16', 15, 2, 10, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
+-- call add_session(3, date '2021-01-01', 1, date '2021-07-15', 15, 1, 9, 3); 
+-- call add_session(4, date '2021-01-01', 1, date '2021-07-16', 15, 1, 10, 2); 
 
 call add_session(6, date '2021-02-01', 2, date '2021-07-15', 15, 1, 8, 2); 
 call add_session(6, date '2021-02-01', 2, date '2021-07-16', 14, 2, 9, 6); 
