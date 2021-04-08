@@ -1318,6 +1318,8 @@ BEGIN
 		RAISE EXCEPTION 'Course Offering not found.';
     ELSEIF (_weekday not in (1,2,3,4,5)) THEN
         RAISE EXCEPTION 'Day of the course session must be on a weekday.';
+    -- ELSEIF CURRENT_DATE > _courseSessionDate THEN
+    --     RAISE EXCEPTION 'Session date must be after current date.';
 	END IF;
 	
     IF _courseSessionDate >= registDeadline + 10 THEN
