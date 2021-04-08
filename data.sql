@@ -102,98 +102,122 @@ VALUES (50, 5, 1);
 
 ---------------------------- CALLS TO INSERT COURSE OFFERINGS -------------------------
 -- add_course_offering (IN offeringId INT, IN courseId INT, IN courseFee MONEY, IN launchDate DATE, 
---						IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, 
---						IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
+-- 						IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, 
+-- 						IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
+	
+-- call add_course_offering (1,9,100::MONEY, '2021-03-16'::DATE, 
+--   						  '2021-06-13'::DATE, 3, 90, 
+--   						  ARRAY['2021-06-25', '2021-06-26', '2021-06-27' ::DATE], ARRAY[19,14,9], ARRAY[9,10,10]);
 
- call add_course_offering (2,1,150::MONEY, '2021-01-10'::DATE, 
- 						  '2021-07-20'::DATE, 2, 100, 
- 						  ARRAY['2021-08-02', '2021-08-10', '2021-08-20'::DATE], ARRAY[10,9,15], ARRAY[3,4,5]);
-						  
- call add_course_offering (3,1,200::MONEY, '2021-03-15'::DATE, 
- 						 '2021-10-15'::DATE, 2, 150, 
- 						  ARRAY['2021-10-26', '2021-10-28', '2021-11-05', '2021-11-08'::DATE], ARRAY[11,9,15,14], ARRAY[5,9,2,6]);
 
--- call add_course_offering (1,2,100::MONEY, '2021-01-31'::DATE, 
-  						--   '2021-05-05'::DATE, 3, 80, 
-  						--   ARRAY['2021-05-18', '2021-05-21','2021-05-27'::DATE], ARRAY[9,10,14], ARRAY[7,8,4]);
+----------------------------- MANUALLY ADD CourseOfferings  -----------------------------
 
- call add_course_offering (2,3,150::MONEY, '2021-02-17'::DATE, 
+--course 1, offering 1
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (1, '2021-01-01', 50, 100, '2021-06-16', 'available', 100 , '2021-07-01', '2021-07-20', 1, 2);
+
+--course 1, offering 2
+call add_course_offering (2,1,150::MONEY, '2021-01-10'::DATE, 
+						'2021-07-20'::DATE, 2, 100, 
+						ARRAY['2021-08-02', '2021-08-10', '2021-08-20'::DATE], ARRAY[10,9,15], ARRAY[3,4,5]);
+
+--course 1, offering 3			
+call add_course_offering (3,1,200::MONEY, '2021-03-15'::DATE, 
+						'2021-10-15'::DATE, 2, 150, 
+						ARRAY['2021-10-26', '2021-10-28', '2021-11-05', '2021-11-08'::DATE], ARRAY[11,9,15,14], ARRAY[5,9,2,6]);
+
+--course 2, offering 1
+call add_course_offering (1,2,100::MONEY, '2021-01-31'::DATE, 
+  						  '2021-05-05'::DATE, 3, 80, 
+  						  ARRAY['2021-05-18', '2021-05-21','2021-05-27'::DATE], ARRAY[9,10,14], ARRAY[7,8,4]);
+
+--course 2, offering 2	
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (2, '2021-02-01', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
+
+--course 3, offering 1
+INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+							 seatingCapacity, startDate, endDate, courseId, employeeId)
+	values (1, '2021-01-01', 50, 100, '2021-06-17', 'available', 125 , '2021-07-02', '2021-07-20', 3, 2);
+
+--course 3, offering 2
+call add_course_offering (2,3,150::MONEY, '2021-02-17'::DATE, 
   						  '2021-08-20'::DATE, 3, 110, 
   						  ARRAY['2021-09-02', '2021-09-06', '2021-09-10'::DATE], ARRAY[10,14,15], ARRAY[2,6,8]);
 
+-- course 3, offering 3
  call add_course_offering (3,3,200::MONEY, '2021-03-18'::DATE, 
   						  '2021-09-25'::DATE, 2, 150, 
   						  ARRAY['2021-10-05', '2021-10-07', '2021-10-15' ::DATE], ARRAY[9,10,11], ARRAY[10,4,4]);
 
-
- call add_course_offering (2,4,150::MONEY, '2021-03-10'::DATE, 
-   						  '2021-08-20'::DATE, 2, 150, 
-  						  ARRAY['2021-09-06', '2021-09-07', '2021-09-14' ::DATE], ARRAY[9,10,14], ARRAY[6,6,5]);			  
- call add_course_offering (3,4,200::MONEY, '2021-04-03'::DATE, 
-   						  '2021-09-13'::DATE, 2, 100, 
-   						  ARRAY['2021-09-24', '2021-09-27'::DATE], ARRAY[10,14], ARRAY[4,5]);					  
-
- call add_course_offering (2,5,150::MONEY, '2021-02-10'::DATE, 
-   						  '2021-07-15'::DATE, 2, 70, 
-   						  ARRAY['2021-08-02', '2021-08-05', '2021-08-10' ::DATE], ARRAY[9,10,14], ARRAY[9,5,1]);
-
- call add_course_offering (1,6,100::MONEY, '2021-01-15'::DATE, 
-   						  '2021-05-07'::DATE, 3, 100, 
-   						  ARRAY['2021-05-20', '2021-05-25', '2021-05-27' ::DATE], ARRAY[11,14,15], ARRAY[6,3,7]);
-	
--- call add_course_offering (1,9,100::MONEY, '2021-03-16'::DATE, 
-  						--   '2021-06-13'::DATE, 3, 90, 
-  						--   ARRAY['2021-06-25', '2021-06-26', '2021-06-27' ::DATE], ARRAY[19,14,9], ARRAY[9,10,10]);
-
------------------------------ MANUALLY ADD CourseOfferings  -----------------------------
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-16', 'available', 100 , '2021-07-01', '2021-07-20', 1, 2);
-	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-17', 'available', 125 , '2021-07-02', '2021-07-20', 3, 2);
-	
+--course 4, offering 1
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (1, '2021-01-01', 50, 100, '2021-06-18', 'available', 150 , '2021-07-03', '2021-07-20', 4, 2);
-	
+
+-- course 4, offering 2
+ call add_course_offering (2,4,150::MONEY, '2021-03-10'::DATE, 
+   						  '2021-08-20'::DATE, 2, 150, 
+  						  ARRAY['2021-09-06', '2021-09-07', '2021-09-14' ::DATE], ARRAY[9,10,14], ARRAY[6,6,5]);
+
+-- course 4, offering 3										  
+ call add_course_offering (3,4,200::MONEY, '2021-04-03'::DATE, 
+   						  '2021-09-13'::DATE, 2, 100, 
+   						  ARRAY['2021-09-24', '2021-09-27'::DATE], ARRAY[10,14], ARRAY[4,5]);	
+
+--course 5, offering 1	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (1, '2021-01-01', 50, 100, '2021-06-18', 'available', 200 , '2021-07-04', '2021-07-20', 5, 2);
-	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (2, '2021-02-01', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
-	
+
+-- course 5, offering 2
+call add_course_offering (2,5,150::MONEY, '2021-02-10'::DATE, 
+   						  '2021-07-15'::DATE, 2, 70, 
+   						  ARRAY['2021-08-02', '2021-08-05', '2021-08-10' ::DATE], ARRAY[9,10,14], ARRAY[9,5,1]);
+
+-- course 6, offering 1
+ call add_course_offering (1,6,100::MONEY, '2021-01-15'::DATE, 
+   						  '2021-05-07'::DATE, 3, 100, 
+   						  ARRAY['2021-05-20', '2021-05-25', '2021-05-27' ::DATE], ARRAY[11,14,15], ARRAY[6,3,7]);
+
+--course 6, offering 2	
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (2, '2021-02-01', 100, 99, '2021-06-16', 'available', 170 , '2021-07-02', '2021-07-20', 6, 3);
-	
+
+--course 7, offering 1
+call add_course_offering (1,7,99::MONEY, '2021-02-02'::DATE, 
+   						  '2021-06-14'::DATE, 3, 100, 
+  						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,14], ARRAY[5,2]);	
+
+--course 7, offering 2
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (2, '2021-02-01', 100, 99, '2021-06-15', 'available', 190 , '2021-07-03', '2021-07-20', 7, 3);
 
+--course 7, offering 3
 INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 	values (3, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
-	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-17', 'available', 150 , '2021-07-01', '2021-07-20', 10, 3);
 
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-18', 'available', 150 , '2021-07-01', '2021-07-20', 8, 3);
+-- course 8, offering 1
+ call add_course_offering (1,8,99::MONEY, '2021-02-02'::DATE, 
+   						  '2021-06-18'::DATE, 3, 100, 
+   						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,14], ARRAY[4,10]);					  
+
+-- course 10, offering 1
+ call add_course_offering (1,10,99::MONEY, '2021-02-02'::DATE, 
+   						  '2021-06-17'::DATE, 3, 100,
+   						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,9], ARRAY[3,6]);
+
+-- course 15, offering 1
+ call add_course_offering (1,15,99::MONEY, '2021-02-02'::DATE, 
+   						  '2021-06-19'::DATE, 3, 100, 
+   						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[9,9], ARRAY[5,5]);
 	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-19', 'available', 150 , '2021-07-01', '2021-07-20', 15, 3);
-	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-02-02', 100, 99, '2021-06-14', 'available', 150 , '2021-07-01', '2021-07-20', 7, 3);
-	
+
 -- more recent offerings
 -- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
 -- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
@@ -231,11 +255,13 @@ call add_session(6, date '2021-02-01', 2, date '2021-07-16', 14, 2, 9, 6);
 call add_session(5, date '2021-01-01', 1, date '2021-07-22', 10, 1, 7, 4); 
 call add_session(5, date '2021-01-01', 1, date '2021-07-22', 15, 2, 8, 5); 
 call add_session(7, date '2021-02-01', 2, date '2021-07-12', 15, 1, 9, 2);
-call add_session(10, date '2021-02-02', 1, date '2021-07-12', 15, 1, 10, 3); 
-call add_session(8, date '2021-02-02', 1, date '2021-07-12', 15, 1, 7, 4); 
-call add_session(7, date '2021-02-02', 1, date '2021-07-12', 15, 1, 8, 5);
 
-call add_session(15, date '2021-02-02', 1, date '2021-07-12', 9, 1, 9, 2); 
+--added in course offerings
+-- call add_session(10, date '2021-02-02', 1, date '2021-07-12', 15, 1, 10, 3); 
+-- call add_session(8, date '2021-02-02', 1, date '2021-07-12', 15, 1, 7, 4); 
+-- call add_session(7, date '2021-02-02', 1, date '2021-07-12', 15, 1, 8, 5);
+
+-- call add_session(15, date '2021-02-02', 1, date '2021-07-12', 9, 1, 9, 2); 
 
 -- more recent sessions to test PurchasesView inactive package
 -- call add_session(2, date '2021-02-03', 4, date '2021-04-09', 15, 1, 9, 2); 
