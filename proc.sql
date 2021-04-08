@@ -1315,8 +1315,6 @@ BEGIN
     SELECT EXTRACT(DOW FROM _courseSessionDate) INTO _weekday;
  	
 	IF registDeadline is NULL or sDate is NULL THEN
-		raise notice 'Course id: %', _courseId;
-		raise notice 'Offeing id: %', _offeringId;
 		RAISE EXCEPTION 'Course Offering not found.';
     ELSEIF (_weekday not in (1,2,3,4,5)) THEN
         RAISE EXCEPTION 'Day of the course session must be on a weekday.';
