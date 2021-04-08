@@ -320,7 +320,7 @@ BEGIN
 	addDate := sessionDate[counter];
     getHour := (SELECT duration FROM Courses cr WHERE cr.courseId = cid);
 	
-	LOOP 
+	LOOP
 		IF sessionDate[counter] IS NULL THEN EXIT;
 		END IF;
 		
@@ -357,7 +357,7 @@ BEGIN
 				VALUES (cid, ldate, offeringId, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
                 SELECT co.offeringId INTO newOid
                 FROM CourseOfferings co
-                WHERE co.launchDate = ldate;
+                WHERE co.launchDate = ldate and co.courseId = cid;
             END IF;
 			SELECT EXTRACT(DOW FROM addDate) INTO getDay;
 			INSERT INTO CourseSessions(offeringId, launchDate, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
@@ -2274,10 +2274,10 @@ BEGIN
         raise exception 'Customer already has an existing redemption of this offering' ;
     elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer has already paid for a session in this course offering';
---  	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
---  		raise exception 'The registration deadline for this course has passed!';
---  	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
---  		raise exception 'The registration for this course has not started yet!';
+  	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+  		raise exception 'The registration deadline for this course has passed!';
+  	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
+  		raise exception 'The registration for this course has not started yet!';
     else
 		return new;
 	end if;
