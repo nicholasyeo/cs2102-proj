@@ -157,9 +157,10 @@ AS $$
 
 DECLARE 
 	area TEXT;
-	curs CURSOR FOR (SELECT * FROM Specialises s INNER JOIN Employees e ON s.employeeId = e.employeeId ORDER BY s.employeeId ASC);
+	curs CURSOR FOR (SELECT * FROM Specialises s INNER JOIN Employees e ON s.employeeId = e.employeeId WHERE e.departDate IS NULL ORDER BY s.employeeId ASC);
 	r RECORD;
 	getMonth INT;
+    getYear INT;
 	availDay DATE;
 	adjHours INT[] := '{9,10,11,14,15,16,17}';
 	counter INT;
@@ -172,6 +173,7 @@ BEGIN
 	area := (SELECT cr.areaName FROM Courses cr WHERE cr.courseId = course);
 	
 	getMonth := (SELECT EXTRACT(MONTH FROM startDate));
+    getYear := (SELECT EXTRACT(YEAR FROM startDate));
 
 	OPEN curs;
 	LOOP	
@@ -184,7 +186,7 @@ BEGIN
 
 			SELECT SUM(duration) INTO totalHours 
 			FROM CourseSessions cs INNER JOIN Courses cr ON cr.courseId = cs.courseId
-			WHERE cs.employeeId = r.employeeId AND EXTRACT(MONTH FROM cs.sessDate) = getMonth;
+			WHERE cs.employeeId = r.employeeId AND EXTRACT(MONTH FROM cs.sessDate) = getMonth AND EXTRACT(YEAR FROM cs.sessDate)=getYear;
 			
 			monthlyHours := coalesce(totalHours, 0);
 			
@@ -220,26 +222,6 @@ END;
 
 $$ LANGUAGE plpgsql;
 
--- 8. find_rooms //done
-CREATE OR REPLACE FUNCTION find_rooms(IN selectedDate DATE, IN selectedHour INT, IN selectedDuration INT) 
-RETURNS TABLE (roomId INT) 
-AS $$
-DECLARE 
-    curs CURSOR FOR (SELECT * FROM LectureRooms lr LEFT JOIN (CourseSessions cs INNER JOIN Courses cr on cr.courseId = cs.courseId) ON lr.roomId = cs.roomId);
-    r RECORD;
-BEGIN
-    OPEN curs;
-    LOOP
-        FETCH curs INTO r;
-        EXIT WHEN NOT FOUND;
-        IF ((r.sessDate IS NULL) OR (r.sessDate <> selectedDate) OR (r.sessDate = selectedDate AND r.sessHour + r.duration <= selectedHour) OR  (r.sessDate = selectedDate AND selectedHour + selectedDuration <= r.sessHour)) THEN
-            roomId := r.roomId;
-            RETURN NEXT;
-        END IF;
-    END LOOP;
-    CLOSE CURS;
-END;
-$$ LANGUAGE plpgsql;
 
 -- 8. find_rooms //done
 CREATE OR REPLACE FUNCTION find_rooms(IN selectedDate DATE, IN selectedHour INT, IN selectedDuration INT) 
@@ -313,7 +295,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 --10. add_course_offering
-CREATE OR REPLACE PROCEDURE add_course_offering (IN offeringId INT, IN courseId INT, IN courseFee MONEY, IN launchDate DATE, 
+CREATE OR REPLACE PROCEDURE add_course_offering (IN offeringId INT, IN cid INT, IN courseFee MONEY, IN ldate DATE, 
 						IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, 
 						IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
 AS $$
@@ -326,12 +308,17 @@ DECLARE
 	addInstructorId INT;
 	tempCap INT;
 	getDay INT;
+    getHour INT;
+    addHours INT ;
+    hoursArr INT[];
+    newOid INT;
 	
 BEGIN 
 	
 	counter := 1;
 	countCapacity := 0;
 	addDate := sessionDate[counter];
+    getHour := (SELECT duration FROM Courses cr WHERE cr.courseId = cid);
 	
 	LOOP 
 		IF sessionDate[counter] IS NULL THEN EXIT;
@@ -341,29 +328,51 @@ BEGIN
 		addStartHr := sessionStartHr[counter];
 		addRoomId := roomId[counter];
 
+        addHours := addStartHr;
+        hoursArr := ARRAY[]::INT[];
+        LOOP
+            hoursArr := array_append(hoursArr, addhours);
+            addHours:=addHours +1;
+            IF(addHours > addStartHr + getHour -1) THEN 
+            EXIT;
+            END IF;
+        END LOOP;
+
 		SELECT I.employeeId INTO addInstructorId
-		FROM get_available_instructors(courseId, addDate, addDate) AS I
-		WHERE I.selectedDay = addDate AND addStartHr = ANY (I.selectedHours)
+		FROM get_available_instructors(cid, addDate, addDate) AS I
+		WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND NOT EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
 		LIMIT 1;
+		
+		IF (addInstructorId IS NULL ) THEN
+			SELECT I.employeeId INTO addInstructorId
+			FROM get_available_instructors(cid, addDate, addDate) AS I
+			WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
+			AND monthlyHours + getHour <= 30
+			LIMIT 1;
+		END IF;
 		
 		IF (addInstructorId IS NOT NULL) THEN
 			IF (counter = 1) THEN 
 				INSERT INTO CourseOfferings (courseId, launchDate, offeringId, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
-				VALUES (courseId, launchDate, offeringId, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
-			END IF;
+				VALUES (cid, ldate, offeringId, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
+                SELECT co.offeringId INTO newOid
+                FROM CourseOfferings co
+                WHERE co.launchDate = ldate;
+            END IF;
 			SELECT EXTRACT(DOW FROM addDate) INTO getDay;
 			INSERT INTO CourseSessions(offeringId, launchDate, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
-			VALUES(offeringId, launchDate, counter, addDate, addStartHr, addInstructorId, addRoomId,courseId, getDay); 
+			VALUES(newOid, ldate, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
 			
 			countCapacity := countCapacity + tempCap;
 
 		ELSE 
-			RAISE NOTICE 'Unable to find instructors! Course offering addition aborted.';
+			RAISE EXCEPTION 'Unable to find instructors! Course offering addition aborted.';
 			ROLLBACK;
 			EXIT;
 		END IF;
 		
 		COUNTER := COUNTER + 1;
+   
 		
 	END LOOP;
     
@@ -1431,22 +1440,22 @@ BEGIN
 			counter := 0;
 			FOR temprow IN 
 				SELECT * 
-				FROM CourseOfferings co LEFT JOIN CountRegistrations crg ON co.offeringId = crg.offeringId
+				FROM CourseOfferings co LEFT JOIN CourseAttendance crg ON co.offeringId = crg.offeringId
 				WHERE co.courseId = r.courseId AND currYear = EXTRACT(YEAR FROM co.startDate)
 				ORDER BY co.startDate ASC
 			LOOP
-				IF (temprow.totalRegistration IS NULL OR temprow.totalRegistration <= prevReg) THEN
+				IF (temprow.totalAttendance IS NULL OR temprow.totalAttendance <= prevReg) THEN
 					EXIT;
 				ELSE
-					countReg := temprow.totalRegistration + prevReg;
-					prevReg := temprow.totalRegistration;
+					countReg := temprow.totalAttendance + prevReg;
+					prevReg := temprow.totalAttendance;
 					counter := counter + 1;
 				END IF;
 				
 				IF (counter = countOfferings) THEN
 					courseId := r.courseId;
 					courseTitle := r.courseTitle;
-					areaName := r.areName;
+					areaName := r.areaName;
 					numOfferings := countOfferings;
 					numRegistrations := countReg;
 					RETURN NEXT;
@@ -1784,21 +1793,21 @@ DECLARE
 	
 BEGIN
 	SELECT startDate, endDate INTO oldStart, oldEnd
-	FROM CourseOfferings 
-	WHERE offeringId = NEW.offeringId;
+	FROM CourseOfferings
+	WHERE offeringId = NEW.offeringId AND courseId = NEW.courseId;
 	
 	IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN 
 
         IF (oldStart > NEW.sessDate) THEN
             UPDATE CourseOfferings
             SET startDate = NEW.sessDate 
-            WHERE offeringId = NEW.offeringId and courseId = new.courseId;
+            WHERE offeringId = NEW.offeringId and courseId = NEW.courseId;
         END IF;
 
         IF (oldEnd < NEW.sessDate) THEN
             UPDATE CourseOfferings
             SET endDate = NEW.sessDate 
-            WHERE offeringId = NEW.offeringId and courseId = new.courseId;
+            WHERE offeringId = NEW.offeringId and courseId = NEW.courseId;
         END IF;
 		
 	ELSIF (TG_OP = 'DELETE') THEN 
@@ -1806,26 +1815,26 @@ BEGIN
 		
 			SELECT sessDate INTO nextStart
 			FROM CourseSessions
-            WHERE offeringId = OLD.offeringId AND sessDate <> oldStart
+            WHERE offeringId = OLD.offeringId and courseId = new.courseId AND sessDate <> oldStart
 			ORDER BY sessDate ASC
 			LIMIT 1;
 			
 			UPDATE CourseOfferings 
 			SET startDate = nextStart 
-			WHERE courseId = cid;
+			WHERE offeringId = OLD.offeringId and courseId = OLD.courseId ;
 			
 		END IF;
 		IF (OLD.sessDate = oldEnd) THEN
 		
 			SELECT sessDate INTO nextEnd
 			FROM CourseSessions 
-            WHERE offeringId = OLD.offeringId AND sessDate <> oldEnd
+            WHERE offeringId = OLD.offeringId and courseId = new.courseId AND sessDate <> oldEnd
 			ORDER BY sessDate DESC
 			LIMIT 1;
 			
 			UPDATE CourseOfferings 
 			SET endDate = nextEnd 
-			WHERE courseId = cid;
+			WHERE offeringId = OLD.offeringId and courseId = OLD.courseId ;
 			
 		END IF;	
 	END IF;
@@ -1851,32 +1860,30 @@ DECLARE
 BEGIN
 
 	SELECT lr.seatingCapacity INTO newSeats
-	FROM CourseSessions cs INNER JOIN LectureRooms lr ON cs.roomId = lr.roomId
-	WHERE cs.courseId = NEW.courseId;
+	FROM LectureRooms lr 
+	WHERE lr.roomId = NEW.roomId;
 	
 	SELECT lr.seatingCapacity INTO oldSeats
-	FROM CourseSessions cs INNER JOIN LectureRooms lr ON cs.roomId = lr.roomId
-	WHERE cs.courseId = OLD.courseId;
+	FROM LectureRooms lr
+	WHERE lr.roomId = OLD.roomId;
 	
- 
-	
-	SELECT totalRegistration INTO currReg
-	FROM CountRegistrations r
-	WHERE r.offeringId = NEW.offeringId;
+	SELECT totalAttendance INTO currReg
+	FROM CourseAttendance r
+	WHERE r.courseId = NEW.courseId AND r.offeringId = NEW.offeringId;
 		
 	IF (TG_OP = 'INSERT') THEN 
 		SELECT seatingCapacity INTO currSeats
 		FROM CourseOfferings co
-		WHERE co.offeringId = NEW.offeringId;
+		WHERE co.courseId = NEW.courseId AND co.offeringId = NEW.offeringId;
 		
 		calSeats := currSeats + newSeats;
 		UPDATE CourseOfferings co
 		SET seatingCapacity = calSeats
-		WHERE co.courseId = NEW.courseId;
+		WHERE co.courseId = NEW.courseId AND co.offeringId = NEW.offeringId;
 	ELSEIF (TG_OP = 'UPDATE') THEN 
 		SELECT seatingCapacity INTO currSeats
 		FROM CourseOfferings co
-		WHERE co.offeringId = NEW.offeringId;
+		WHERE co.courseId = NEW.courseId AND co.offeringId = NEW.offeringId;
 		
 		calSeats := currSeats - oldSeats + newSeats;
 		IF (calSeats < currReg) THEN 
@@ -1885,11 +1892,11 @@ BEGIN
 		END IF;
 		UPDATE CourseOfferings co
 		SET seatingCapacity = calSeats
-		WHERE co.couseId = NEW.courseId;	
+		WHERE co.courseId = NEW.courseId AND co.offeringId = NEW.offeringId;	
 	ELSEIF (TG_OP='DELETE') THEN
 		SELECT seatingCapacity INTO currSeats
 		FROM CourseOfferings co
-		WHERE co.offeringId = OLD.offeringId;
+		WHERE co.courseId = OLD.courseId AND co.offeringId = OLD.offeringId;
 		
 		calSeats := currSeats - oldSeats;
 		IF (calSeats < currReg) THEN 
@@ -1898,7 +1905,7 @@ BEGIN
 		END IF;
 		UPDATE CourseOfferings co
 		SET co.seatingCapacity = calSeats
-		WHERE couseId = OLD.courseId;	
+		WHERE courseId = OLD.courseId AND co.offeringId = OLD.offeringId;	
 	END IF;
 	RETURN NEW;
 	
@@ -1909,25 +1916,31 @@ CREATE TRIGGER update_seatingcapacity_trigger
 AFTER INSERT OR UPDATE OR DELETE ON CourseSessions
 FOR EACH ROW EXECUTE FUNCTION update_seatingcapacity_func();
 
--- Trigger to ensure registration deadline is 10 days before start date
+-- Trigger to ensure date of session cannot be after registration deadline 
 
 CREATE OR REPLACE FUNCTION regDeadline_offering_func() RETURNS TRIGGER 
 AS $$
 DECLARE
 	calDate DATE;
+    regDeadline DATE;
 	
 BEGIN
-	calDate := (SELECT NEW.startDate - INTERVAL '10 days');
-	If (calDate < NEW.registrationDeadline) THEN
-		RAISE NOTICE 'Registration deadline should be 10 days before start date. Amendments made.';
-		NEW.registrationDeadline := calDate;
+    SELECT registrationDeadline INTO regDeadline
+    FROM CourseOfferings
+    WHERE courseId = NEW.courseId AND offeringId = NEW.offeringId;
+
+    calDate := (SELECT regDeadline + INTERVAL '10 days');
+
+	If (NEW.sessDate < calDate) THEN
+		RAISE EXCEPTION 'Date of session cannot be after registration deadline.';
+		RETURN NULL;
 	END IF;
 	RETURN NEW;
 END;
 $$ LANGUAGE PLPGSQL;
 
 CREATE TRIGGER regDeadline_offering_trigger
-BEFORE INSERT OR UPDATE ON CourseOfferings 
+BEFORE INSERT OR UPDATE ON CourseSessions 
 FOR EACH ROW EXECUTE FUNCTION regDeadline_offering_func();
 
 CREATE OR REPLACE FUNCTION parttimers_hours_func() RETURNS TRIGGER
@@ -1952,24 +1965,13 @@ BEGIN
 		
 		SELECT duration INTO newHrs
 		FROM Courses cr 
-		WHERE cr.courseId = NEW.courseId;
-		
-		IF (TG_OP = 'INSERT') THEN 
-			IF (totalHrs + newHrs > 30) THEN 
-				RAISE EXCEPTION 'Part Timer working hours will exceed 30 hours this month!';
-				RETURN NULL;
-			END IF;
-			
-		ELSIF (TG_OP = 'UPDATE') THEN
-			SELECT duration INTO oldhrs
-			FROM Courses cr 
-			WHERE cr.courseId = OLD.courseId;
-			
-			IF (totalHrs - oldHrs + newHrs > 30) THEN 
-				RAISE EXCEPTION 'Part Timer working hours exceed 30 hours this month!';
-				RETURN NULL;
-			END IF;
-		END IF;
+		WHERE cr.courseId = NEW.courseId;		
+
+        IF (totalHrs + newHrs > 30) THEN 
+            RAISE EXCEPTION 'Part Timer working hours will exceed 30 hours this month!';
+            RETURN NULL;
+        END IF;
+	
         RETURN NEW;
 	END IF;
     RETURN NEW;
@@ -1983,14 +1985,12 @@ FOR EACH ROW EXECUTE FUNCTION parttimers_hours_func();
 CREATE OR REPLACE FUNCTION check_instructor_hours_func() RETURNS TRIGGER 
 AS $$
 DECLARE
-	selectedDate DATE;
 	startHr INT;
 	endHr INT;
 	teachingDuration INT;
 	counter INT;
 	
 BEGIN
-	selectedDate := NEW.sessDate;
 	startHr := NEW.sessHour;
 	SELECT duration INTO teachingDuration
 	FROM Courses
@@ -2005,7 +2005,7 @@ BEGIN
 		END IF;
 		counter := counter + 1;
 		
-		IF (counter > endHr + 1) THEN 
+		IF (counter > endHr) THEN 
 		RETURN NEW;
 		END IF;
 	END LOOP;
@@ -2028,7 +2028,7 @@ BEGIN
 	SELECT duration INTO teachingDuration
 	FROM Courses
 	WHERE courseId = NEW.courseId;
-	endTime := startTime + teachingDuration;
+	endTime := startTime + teachingDuration-1;
 	counter := startTime;
 	-- raise notice 'Start time is: %', startTime;
 	-- raise notice 'End time is: %', endTime;
@@ -2037,7 +2037,7 @@ BEGIN
 		raise exception 'Unsuitable start/end timing';
 	elseif (startTime = 12 or startTime = 13) then
 		raise exception 'Sessions are not allowed to be held between 12pm-2pm';
-	elseif (startTime < 12 and endTime > 12) then
+	elseif (startTime < 12 and endTime >= 12) then
 		raise exception 'Sessions cannot extend past 12pm.';
 	else
 		return new;
@@ -2054,19 +2054,17 @@ FOR EACH ROW EXECUTE FUNCTION check_sessiontimings_func();
 CREATE OR REPLACE FUNCTION check_room_hours_func() RETURNS TRIGGER 
 AS $$
 DECLARE
-	selectedDate DATE;
 	startHr INT;
 	endHr INT;
 	teachingDuration INT;
 	counter INT;
 	
 BEGIN
-	selectedDate := NEW.sessDate;
 	startHr := NEW.sessHour;
 	SELECT duration INTO teachingDuration
 	FROM Courses
 	WHERE courseId = NEW.courseId;
-	endHr := startHr + teachingDuration;
+	endHr := startHr + teachingDuration -1;
 	counter := startHr;
 	LOOP
 		IF EXISTS (SELECT 1
@@ -2098,12 +2096,13 @@ DECLARE
 	newId INT;
 BEGIN
 	SELECT MAX(offeringId) INTO currMaxId
-	FROM CourseOfferings;
+	FROM CourseOfferings
+    WHERE courseId = NEW.courseId ;
 	
 	newId = currMaxId +1;
 	
 	IF (NEW.offeringId <> newId) THEN
-		SET NEW.offeringId = newId;
+		new.offeringId := newId;
 	END IF;
 	RETURN NEW;
 END;
@@ -2122,12 +2121,13 @@ DECLARE
 	newId INT;
 BEGIN
 	SELECT MAX(sessionId) INTO currMaxId
-	FROM CourseSessions;
+	FROM CourseSessions
+    WHERE courseId = NEW.courseId AND offeringId = NEW.offeringId;
 	
 	newId = currMaxId +1;
 	
 	IF (NEW.sessionId <> newId) THEN
-		SET NEW.sessionId = newId;
+		new.sessionId := newId;
 	END IF;
 	RETURN NEW;
 END;
