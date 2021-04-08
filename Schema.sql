@@ -252,21 +252,15 @@ create or replace view OfferingCapacity (courseId, offeringId, totalCapacity) as
 	from CourseOfferings
 	group by courseId, offeringId;
 
-create or replace view CourseAttendance (courseId, totalAttendance) as
+create or replace view CourseAttendance (courseId, offeringId, totalAttendance) as
 	with UnionAttendance as (
 		select * from RedeemAttendance
-		union
+		union all
 		select * from PayAttendance
 	)
-	select courseId, sum(numEnrolled)
+	select courseId, offeringId, sum(numEnrolled)
 	from UnionAttendance
-	group by courseId;
-
-
-create or replace view CountRegistrations(offeringId, totalRegistration) AS
-    select offeringId, count(*) as totalRegistration
-    FROM CourseOfferings NATURAL JOIN Redeems NATURAL JOIN Pays
-    GROUP BY offeringId;
+	group by courseId, offeringId;
 
 create or replace view PurchasesView as
 with package_with_status as
