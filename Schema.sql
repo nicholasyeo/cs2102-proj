@@ -115,25 +115,25 @@ create table CourseOfferings (
 	startDate				date not null,
 	endDate					date not null,
 	seatingCapacity			integer not null,
-	status					text not null check (status in ('available', 'fully booked')),
+	status					text not null,
 	primary key (courseId, offeringId),
 	unique (courseId, launchDate),
 	foreign key (courseId) references Courses (courseId) on delete cascade on update cascade,
-	foreign key (employeeId) references Administrators (employeeId)
+	foreign key (employeeId) references Administrators (employeeId),
+	constraint status_validity check (status in ('available', 'fully booked'))
 );
 
 create table CourseSessions (
 	courseId 				integer,
-	launchDate 				date, 
 	offeringId              integer,
+	sessionId 				integer not null, 
 	sessDate 				date,
 	sessHour 				integer,
 	weekday 				integer not null,
-	sessionId 				integer not null, 
 	employeeId				integer not null, 
 	roomId 					integer not null,
 	primary key (courseId, offeringId, sessDate, sessHour),
-	unique (courseId, launchDate, sessionId),
+	unique (courseId, offeringId, sessionId),
 	foreign key (courseId, offeringId) references CourseOfferings (courseId, offeringId) on delete cascade on update cascade,
 	foreign key (employeeId) references Instructors (employeeId) on update cascade,
 	foreign key (roomId) references LectureRooms (roomId) on update cascade,
@@ -177,8 +177,8 @@ create table Owns (
 	customerId 				integer,
 	ccNumber 				text not null,
 	primary key (customerId),
-	foreign key (customerId) references Customers (customerId)  on update cascade,
-	foreign key (ccNumber) references CreditCards (ccNumber)  on update cascade
+	foreign key (customerId) references Customers (customerId) on update cascade,
+	foreign key (ccNumber) references CreditCards (ccNumber) on update cascade
 );
 
 create table Purchases (
