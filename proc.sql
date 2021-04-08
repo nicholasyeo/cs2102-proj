@@ -1756,6 +1756,22 @@ create trigger parttimer_salaries_trigger
 before insert or update on PTSalaries
 for each row execute function parttimer_salaries_function();
 
+-- Trigger to ensure that a course offering must have at least one course session.
+create or replace function at_least_one_session_function()
+returns trigger as $$
+begin
+    if not exists(select 1 from CourseSessions where courseId = new.courseId and offeringId = new.offeringId) then
+        raise exception 'A course offering must have at least one session.';
+    end if;
+
+    return null;
+end;
+$$ language plpgsql;
+
+create constraint trigger at_least_one_session_trigger
+after insert or update on CourseOfferings
+deferrable initially deferred
+for each row execute function at_least_one_session_function();
 
 --Trigger to ensure course offering start and end date attributes match sessions start and end dates
 CREATE OR REPLACE FUNCTION offering_dates_func() RETURNS TRIGGER 
