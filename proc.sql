@@ -2350,3 +2350,39 @@ $$ language plpgsql;
 create trigger session_instructor_specialises_check_trigger
 before insert or update on CourseSessions
 for each row execute function session_instructor_specialises_check();
+
+create or replace function session_instructor_departed_check() returns trigger as $$
+declare
+    _departDate date;
+BEGIN
+	select departDate into _departDate from Employees where employeeId = NEW.employeeId;
+    
+	if _departDate < NEW.sessDate then
+        raise exception 'Instructor has departed before the date of the course session.';
+    else
+		return new;
+	end if;
+END;
+$$ language plpgsql;
+
+create trigger session_instructor_departed_check_trigger
+before insert or update on CourseSessions
+for each row execute function session_instructor_departed_check();
+
+create or replace function offering_admin_departed_check() returns trigger as $$
+declare
+    _departDate date;
+BEGIN
+	select departDate into _departDate from Employees where employeeId = NEW.employeeId;
+    
+	if _departDate < NEW.registrationDeadline then
+        raise exception 'Administrator has departed before the registration deadline of the course offering.';
+    else
+		return new;
+	end if;
+END;
+$$ language plpgsql;
+
+create trigger offering_admin_departed_check_trigger
+before insert or update on CourseOfferings
+for each row execute function offering_admin_departed_check();
