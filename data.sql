@@ -199,20 +199,34 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 -- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 -- 	values (4, '2021-02-03', 100, 99, '2021-04-15', 'available', 150 , '2021-04-01', '2021-07-20', 2, 3);
 
--- Outdated CourseOffering for promote_courses()
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
- 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 11, 4);
+-- Outdated CourseOffering/CourseSessions for promote_courses()
+-- courseId: 11, offeringId: 1
+call add_course_offering(1, 11, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-02'::date], array[15], array[2]);
+-- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+--  							 seatingCapacity, startDate, endDate, courseId, employeeId)
+--  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 11, 4);
+-- call add_session(11, date '2020-02-02', 1, date '2020-07-02', 15, 1, 10, 2);
 
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
- 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 12, 4);
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
- 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 13, 4);
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
- 	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 14, 4);
+-- courseId: 12, offeringId: 1
+call add_course_offering(1, 12, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-02'::date], array[10], array[2]);
+-- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+--  							 seatingCapacity, startDate, endDate, courseId, employeeId)
+--  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 12, 4);
+-- call add_session(12, date '2020-02-02', 1, date '2020-07-02', 10, 1, 10, 2);
+
+-- courseId: 13, offeringId: 1
+call add_course_offering(1, 13, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-02'::date], array[14], array[5]);
+-- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+--  							 seatingCapacity, startDate, endDate, courseId, employeeId)
+--  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 13, 4);
+-- call add_session(13, date '2020-02-02', 1, date '2020-07-02', 14, 1, 7, 5);
+
+-- courseId: 14, offeringId: 1
+call add_course_offering(1, 14, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-06'::date], array[15], array[2]);
+-- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
+--  							 seatingCapacity, startDate, endDate, courseId, employeeId)
+--  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 14, 4);
+-- call add_session(14, date '2020-02-02', 1, date '2020-07-06', 15, 1, 10, 2);
 	
 ----------------------------- CALL TO ADD CourseSession -----------------------------
 -- _courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
@@ -245,12 +259,6 @@ call add_session(15, date '2021-02-02', 1, date '2021-07-12', 9, 1, 9, 2);
 -- call add_session(2, date '2021-02-03', 4, date '2021-04-09', 11, 5, 8, 2); 
 
 -- call add_session(1, date '2021-01-01', 1, date '2021-01-16', 10, 3, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
-
--- Outdated session
-call add_session(11, date '2020-02-02', 1, date '2020-07-02', 15, 1, 10, 2);
-call add_session(12, date '2020-02-02', 1, date '2020-07-02', 10, 1, 10, 2);
-call add_session(13, date '2020-02-02', 1, date '2020-07-02', 14, 1, 7, 5);
-call add_session(14, date '2020-02-02', 1, date '2020-07-06', 15, 1, 10, 2);
 
 ----------------------------- UPDATE CourseSession Room -----------------------------
 -- ERROR: current date is past course session date
