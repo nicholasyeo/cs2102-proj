@@ -13,9 +13,9 @@ call add_employee('Kelvin'::text, 'Serangoon'::text, 90000011, 'kelvin@gmail.com
 call add_employee('Larry'::text, 'Serangoon'::text, 90000012, 'larry@gmail.com'::text, null, 25::money, '2021-04-07'::date, 'instructor'::text, array['Algorithms', 'Artificial Intelligence']);
 
 ----------------------------- CALLS TO REMOVE EMPLOYEES -----------------------------
-call remove_employee(2, date '2021-06-01');
-call remove_employee(3, date '2021-03-15');
-call remove_employee(11, date '2021-04-22');
+-- call remove_employee(2, date '2021-06-01');
+-- call remove_employee(3, date '2021-03-15');
+-- call remove_employee(11, date '2021-04-22');
 
 ----------------------------- CALLS TO ADD CUSTOMERS -----------------------------
 call add_customer('Alex', 'Sengkang', 80000001, 'alex@gmail.com', '0000 0000 0000 0000', date '2025-01-01', '000');

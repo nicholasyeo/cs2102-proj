@@ -2148,28 +2148,38 @@ returns trigger as $$
 DECLARE
     activePackages integer;
     partiallyActivePackages integer;
+    _packageStatus text;
 BEGIN
     select count(packageStatus) into activePackages from PurchasesView where customerId = NEW.customerId 
         and packageStatus = 'active';
     select count(packageStatus) into partiallyActivePackages from PurchasesView where customerId = NEW.customerId 
         and packageStatus = 'partially active';
+    
  
     IF activePackages >= 1 or partiallyActivePackages >= 1 THEN
-        IF NEW.sessionsLeft = 0 THEN
-        -- Only allow insertion of inactive packages 
-            RETURN NEW;
-        ELSE
+        IF TG_OP = 'INSERT' THEN 
+            IF NEW.sessionsLeft = 0 THEN
+                -- Only allow insertion of inactive packages 
+                -- on new insertion, only case possible when sessionsleft = 0 is when inactive
+                RETURN NEW;
+            END IF;
+        ELSIF TG_OP = 'UPDATE' THEN
             -- If TG_OP is update
-            IF OLD.sessionsLeft = 0 and NEW.sessionsLeft > 0 THEN
+            select packageStatus into _packageStatus from PurchasesView where customerId = OLD.customerId and packageId = OLD.packageId
+                and packageId = OLD.packageID and purchaseDate = OLD.purchaseDate;
+
+            IF _packageStatus = 'inactive' and NEW.sessionsLeft > 0 THEN
                 -- When active/partially packages already exists 
                 -- and trying to update an inactive package to active/partially active
                 RAISE EXCEPTION 'Customer can only have 1 active or partially active packages!';
-            ELSIF OLD.sessionsLeft > 0 THEN
+            ELSIF _packageStatus <> 'inactive' THEN
+                -- If previous package status is not inactive then can update to anything
                 RETURN NEW;
             END IF;
         END IF;
         RAISE EXCEPTION 'Customer can only have 1 active or partially active packages!';
     END IF;
+    -- If customer does not have 1 active or partially active package
     RETURN NEW;
 END;
 $$ language plpgsql;
@@ -2366,3 +2376,39 @@ $$ language plpgsql;
 create trigger session_instructor_specialises_check_trigger
 before insert or update on CourseSessions
 for each row execute function session_instructor_specialises_check();
+
+create or replace function session_instructor_departed_check() returns trigger as $$
+declare
+    _departDate date;
+BEGIN
+	select departDate into _departDate from Employees where employeeId = NEW.employeeId;
+    
+	if _departDate < NEW.sessDate then
+        raise exception 'Instructor has departed before the date of the course session.';
+    else
+		return new;
+	end if;
+END;
+$$ language plpgsql;
+
+create trigger session_instructor_departed_check_trigger
+before insert or update on CourseSessions
+for each row execute function session_instructor_departed_check();
+
+create or replace function offering_admin_departed_check() returns trigger as $$
+declare
+    _departDate date;
+BEGIN
+	select departDate into _departDate from Employees where employeeId = NEW.employeeId;
+    
+	if _departDate < NEW.registrationDeadline then
+        raise exception 'Administrator has departed before the registration deadline of the course offering.';
+    else
+		return new;
+	end if;
+END;
+$$ language plpgsql;
+
+create trigger offering_admin_departed_check_trigger
+before insert or update on CourseOfferings
+for each row execute function offering_admin_departed_check();
