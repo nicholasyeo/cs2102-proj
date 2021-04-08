@@ -50,7 +50,7 @@ call add_course('Knowledge Representation', 'Knowledge, Logic, FOL', 'Artificial
 call add_course('Software Engineering', 'OOP, UML, Code quality, Design patterns', 'Software Engineering', 2);
 call add_course('Data Structures & Algorithms', 'Searching, Sorting, Hashing, Trees, Graphs, SSSP, MST', 'Algorithms', 1);
 call add_course('Design & Analysis of Algorithms', 'Master theorem, Greedy algorithms, Dynamic Programming', 'Algorithms', 1);
-call add_course('Introduction to Computer Networks', 'Application, Transport, Network, Link, Physical layers', 'Network', 3);
+call add_course('Introduction to Computer Networks', 'Application, Transport, Network, Link, Physical layers', 'Network', 1);
 call add_course('Introduction to Information Security', 'Classical/historical ciphers, Modern ciphers, Cryptosystems', 'Security', 2);
 call add_course('Database Systems', 'Relational Algebra, SQL, ER, Normal Forms', 'Database', 2);
 
@@ -205,7 +205,7 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 -- course 8, offering 1
  call add_course_offering (1,8,99::MONEY, '2021-02-02'::DATE, 
    						  '2021-06-18'::DATE, 3, 100, 
-   						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,14], ARRAY[4,10]);					  
+   						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,10], ARRAY[4,10]);					  
 
 -- course 10, offering 1
  call add_course_offering (1,10,99::MONEY, '2021-02-02'::DATE, 
@@ -253,8 +253,8 @@ call add_session(4, date '2021-01-01', 1, date '2021-07-16', 15, 1, 10, 2);
 call add_session(6, date '2021-02-01', 2, date '2021-07-15', 15, 1, 8, 2); 
 call add_session(6, date '2021-02-01', 2, date '2021-07-16', 14, 2, 9, 6); 
 call add_session(5, date '2021-01-01', 1, date '2021-07-22', 10, 1, 7, 4); 
-call add_session(5, date '2021-01-01', 1, date '2021-07-22', 15, 2, 8, 5); 
-call add_session(7, date '2021-02-01', 2, date '2021-07-12', 15, 1, 9, 2);
+call add_session(5, date '2021-01-01', 1, date '2021-07-22', 15, 2, 9, 5); 
+call add_session(7, date '2021-02-01', 2, date '2021-07-12', 15, 1, 12, 2);
 
 --added in course offerings
 -- call add_session(10, date '2021-02-02', 1, date '2021-07-12', 15, 1, 10, 3); 
