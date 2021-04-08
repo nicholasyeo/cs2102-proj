@@ -136,6 +136,11 @@ call add_course_offering (1,2,100::MONEY, '2021-01-31'::DATE,
 call add_course_offering (2,2,99::MONEY, '2021-02-01'::DATE, 
   						  '2021-06-14'::DATE, 3, 100, 
   						  ARRAY['2023-02-02'::DATE], ARRAY[14], ARRAY[1]);
+						  
+--course 2, offering 3
+call add_course_offering (3,2,99::MONEY, '2021-02-02'::DATE, 
+  						  '2021-06-14'::DATE, 3, 100, 
+  						  ARRAY['2023-02-03'::DATE], ARRAY[10], ARRAY[8]);
 
 --course 3, offering 1
 call add_course_offering (1,3,100::MONEY, '2021-01-01'::DATE, 
@@ -167,10 +172,11 @@ call add_course_offering (2,3,150::MONEY, '2021-02-17'::DATE,
    						  '2021-09-13'::DATE, 2, 100, 
    						  ARRAY['2021-09-24', '2021-09-27'::DATE], ARRAY[10,14], ARRAY[4,5]);	
 
---course 5, offering 1	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (1, '2021-01-01', 50, 100, '2021-06-18', 'available', 200 , '2021-07-04', '2021-07-20', 5, 2);
+--course 5, offering 1
+	
+ call add_course_offering (1,5,100::MONEY, '2021-01-01'::DATE, 
+   						  '2021-06-18'::DATE, 2, 50, 
+   						  ARRAY['2021-07-22'::DATE], ARRAY[10], ARRAY[7]);
 
 -- course 5, offering 2
 call add_course_offering (2,5,150::MONEY, '2021-02-10'::DATE, 
@@ -183,24 +189,24 @@ call add_course_offering (2,5,150::MONEY, '2021-02-10'::DATE,
    						  ARRAY['2021-05-20', '2021-05-25', '2021-05-27' ::DATE], ARRAY[11,14,15], ARRAY[6,3,7]);
 
 --course 6, offering 2	
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (2, '2021-02-01', 100, 99, '2021-06-16', 'available', 170 , '2021-07-02', '2021-07-20', 6, 3);
-
+ call add_course_offering (2,6,99::MONEY, '2021-02-01'::DATE, 
+   						  '2021-06-16'::DATE, 3, 100, 
+   						  ARRAY['2021-07-15'::DATE], ARRAY[15], ARRAY[2]);
 --course 7, offering 1
 call add_course_offering (1,7,99::MONEY, '2021-02-02'::DATE, 
    						  '2021-06-14'::DATE, 3, 100, 
   						  ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,14], ARRAY[5,2]);	
 
 --course 7, offering 2
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (2, '2021-02-01', 100, 99, '2021-06-15', 'available', 190 , '2021-07-03', '2021-07-20', 7, 3);
-
+	
+  call add_course_offering (2,7,99::MONEY, '2021-02-01'::DATE, 
+    						  '2021-06-15'::DATE, 3, 100, 
+    						  ARRAY['2021-07-12'::DATE], ARRAY[15], ARRAY[2]);
 --course 7, offering 3
-INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
-							 seatingCapacity, startDate, endDate, courseId, employeeId)
-	values (3, '2021-02-02', 100, 99, '2021-06-15', 'available', 150 , '2021-07-01', '2021-07-20', 2, 3);
+	
+ call add_course_offering (4,7,150::MONEY, '2021-02-03'::DATE, 
+      						  '2021-06-16'::DATE, 3, 50, 
+      						  ARRAY['2021-07-13'::DATE], ARRAY[16], ARRAY[2]);
 
 -- course 8, offering 1
  call add_course_offering (1,8,99::MONEY, '2021-02-02'::DATE, 
@@ -223,34 +229,6 @@ INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee
 -- 							 seatingCapacity, startDate, endDate, courseId, employeeId)
 -- 	values (4, '2021-02-03', 100, 99, '2021-04-15', 'available', 150 , '2021-04-01', '2021-07-20', 2, 3);
 
--- Outdated CourseOffering/CourseSessions for promote_courses()
--- courseId: 11, offeringId: 1
-call add_course_offering(1, 11, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-02'::date], array[15], array[2]);
--- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
---  							 seatingCapacity, startDate, endDate, courseId, employeeId)
---  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 11, 4);
--- call add_session(11, date '2020-02-02', 1, date '2020-07-02', 15, 1, 10, 2);
-
--- courseId: 12, offeringId: 1
-call add_course_offering(1, 12, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-02'::date], array[10], array[2]);
--- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
---  							 seatingCapacity, startDate, endDate, courseId, employeeId)
---  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 12, 4);
--- call add_session(12, date '2020-02-02', 1, date '2020-07-02', 10, 1, 10, 2);
-
--- courseId: 13, offeringId: 1
-call add_course_offering(1, 13, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-02'::date], array[14], array[5]);
--- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
---  							 seatingCapacity, startDate, endDate, courseId, employeeId)
---  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 13, 4);
--- call add_session(13, date '2020-02-02', 1, date '2020-07-02', 14, 1, 7, 5);
-
--- courseId: 14, offeringId: 1
-call add_course_offering(1, 14, 99::money, '2020-02-02'::date, '2020-06-15'::date, 4, 100, array['2020-07-06'::date], array[15], array[2]);
--- INSERT INTO CourseOfferings (offeringId, launchDate, numRegistrations, courseFee, registrationDeadline, status,
---  							 seatingCapacity, startDate, endDate, courseId, employeeId)
---  	values (1, '2020-02-02', 100, 99, '2020-06-15', 'available', 150 , '2020-07-01', '2020-07-20', 14, 4);
--- call add_session(14, date '2020-02-02', 1, date '2020-07-06', 15, 1, 10, 2);
 	
 ----------------------------- CALL TO ADD CourseSession -----------------------------
 -- _courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
@@ -258,17 +236,14 @@ call add_course_offering(1, 14, 99::money, '2020-02-02'::date, '2020-06-15'::dat
 
 -- call add_session(2, date '2021-02-01', 2, date '2023-02-02', 14, 1, 8, 1);  -- Test: session > offering endDate. Expect endDate of CourseOffering to change as well
 
-call add_session(2, date '2021-02-02', 3, date '2023-02-03', 10, 1, 8, 1);
+-- call add_session(2, date '2021-02-02', 3, date '2023-02-03', 10, 1, 8, 1);
 -- call add_session(1, date '2021-01-01', 1, date '2021-07-01', 10, 1, 9, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
 call add_session(1, date '2021-01-01', 1, date '2021-07-16', 15, 2, 10, 1);  -- Test: session < offering startDate. Expect startDate of CourseOffering to change as well
 -- call add_session(3, date '2021-01-01', 1, date '2021-07-15', 15, 1, 9, 3); 
 -- call add_session(4, date '2021-01-01', 1, date '2021-07-16', 15, 1, 10, 2); 
 
-call add_session(6, date '2021-02-01', 2, date '2021-07-15', 15, 1, 8, 2); 
 call add_session(6, date '2021-02-01', 2, date '2021-07-16', 14, 2, 9, 6); 
-call add_session(5, date '2021-01-01', 1, date '2021-07-22', 10, 1, 7, 4); 
 call add_session(5, date '2021-01-01', 1, date '2021-07-22', 15, 2, 9, 5); 
-call add_session(7, date '2021-02-01', 2, date '2021-07-12', 15, 1, 12, 2);
 
 --added in course offerings
 -- call add_session(10, date '2021-02-02', 1, date '2021-07-12', 15, 1, 10, 3); 
@@ -374,30 +349,7 @@ call register_session(4, 7, 2, date '2021-07-12', 15, 1);
 call register_session(8, 15, 1, date '2021-07-12', 9, 0);
 call register_session(9, 8, 1, date '2021-07-12', 15, 1);
 
--- Customer 8 and 9 will register for outdated sessions for promote_courses,
--- This requires disabling trigger to register for past sessions.
 
-/* Hazel registers for courses under AI, Database, Algo 
-call register_session(8, 11, 1, date '2020-07-02', 15, 1);
-call register_session(8, 12, 1, date '2020-07-03', 15, 1);
-call register_session(8, 13, 1, date '2020-07-04', 15, 1);
-
-Ian registers for courses under AI, Network and Algo */
-call register_session(9, 11, 1, date '2020-07-02', 15, 0);
- /*
-call register_session(9, 13, 1, date '2020-07-04', 15, 0);
-call register_session(9, 14, 1, date '2020-07-05', 15, 0);
-
-/* 	
-	Ian registers for courses under AI, Database, Algo and Network.
-	Expected to only see Database, Algo and Network because they are 3 most recent areas.
-*/
-call register_session(9, 11, 1, date '2020-07-02', 15, 0);
-call register_session(9, 12, 1, date '2020-07-03', 15, 0);
-call register_session(9, 13, 1, date '2020-07-04', 15, 0);
-call register_session(9, 14, 1, date '2020-07-05', 15, 0);
-
-*/
 
 -- Register for recent sessions to test inactive package in PurchasesView
 -- call register_session(11, 2, 4, date '2021-04-09', 15, 1);
