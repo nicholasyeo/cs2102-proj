@@ -100,14 +100,14 @@ end;
 $$ language plpgsql;
 
 -- 4. update_credit_card
-create or replace procedure update_credit_card(cid integer,
-    ccNum text, expiryDate date, cvv text) as $$
-
-    insert into CreditCards values (ccNum, expiryDate, cvv);
-
-    update Owns set ccNumber = ccNum where customerId = cid;
-    -- Not sure if need to delete the old credit card?
-$$ language sql;
+create or replace procedure update_credit_card(cid integer, newCcNum text, newExpiryDate date, newCvv text) as $$
+declare
+    oldCcNum text;
+begin
+    select ccNumber into oldCcNum from Owns where customerId = cid;
+    update CreditCards set ccNumber = newCcNum, ccExpiryDate = newExpiryDate, ccCvv = newCvv where ccNumber = oldCcNum;
+end;
+$$ language plpgsql;
 
 -- 5. add_course
 create or replace procedure add_course(cTitle text, cDescription text,
@@ -295,11 +295,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 --10. add_course_offering
-CREATE OR REPLACE PROCEDURE add_course_offering (IN offeringId INT, IN cid INT, IN courseFee MONEY, IN ldate DATE, 
+CREATE OR REPLACE PROCEDURE add_course_offering (IN cid INT, IN courseFee MONEY, IN ldate DATE, 
 						IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, 
 						IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
 AS $$
 DECLARE
+    offeringId INT;
 	counter INT;
 	countCapacity INT;
 	addDate DATE;
@@ -314,7 +315,7 @@ DECLARE
     newOid INT;
 	
 BEGIN 
-	
+	offeringId := 0; -- Trigger will set the ID correspondingly.
 	counter := 1;
 	countCapacity := 0;
 	addDate := sessionDate[counter];
@@ -353,15 +354,15 @@ BEGIN
 		
 		IF (addInstructorId IS NOT NULL) THEN
 			IF (counter = 1) THEN 
-				INSERT INTO CourseOfferings (courseId, launchDate, offeringId, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
-				VALUES (cid, ldate, offeringId, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
+				INSERT INTO CourseOfferings (courseId, offeringId, launchDate, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
+				VALUES (cid, offeringId, ldate, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
                 SELECT co.offeringId INTO newOid
                 FROM CourseOfferings co
                 WHERE co.launchDate = ldate and co.courseId = cid;
             END IF;
 			SELECT EXTRACT(DOW FROM addDate) INTO getDay;
-			INSERT INTO CourseSessions(offeringId, launchDate, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
-			VALUES(newOid, ldate, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
+			INSERT INTO CourseSessions(offeringId, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
+			VALUES(newOid, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
 			
 			countCapacity := countCapacity + tempCap;
 
@@ -1300,7 +1301,7 @@ END;
 $$ language plpgsql;
 
 -- 24. add_session
-create or replace procedure add_session(_courseId integer, _launchDate date, _offeringId integer, _courseSessionDate date, _courseSessionHour integer, _sessionId integer,
+create or replace procedure add_session(_courseId integer, _offeringId integer, _courseSessionDate date, _courseSessionHour integer,
     _instructorId integer, _roomId integer)
 as $$
 DECLARE
@@ -1308,9 +1309,12 @@ DECLARE
 	sDate date;
     eDate date;
     _weekday integer;
+    _sessionId integer;
 BEGIN
-    select registrationDeadline, startDate, endDate into registDeadline, sDate, eDate from CourseOfferings where courseId = _courseId 
-        and launchDate = _launchDate and offeringId = _offeringId;
+    _sessionId := 0; -- Trigger to set the ID correspondingly.
+
+    select registrationDeadline, startDate, endDate into registDeadline, sDate, eDate from CourseOfferings
+        where courseId = _courseId and offeringId = _offeringId;
     
     SELECT EXTRACT(DOW FROM _courseSessionDate) INTO _weekday;
  	
@@ -1323,8 +1327,8 @@ BEGIN
 	END IF;
 	
     IF _courseSessionDate >= registDeadline + 10 THEN
-        insert into CourseSessions (courseId, launchDate, offeringId, sessDate, sessHour, weekday, sessionId, employeeId, roomId)
-        values (_courseId, _launchDate, _offeringId, _courseSessionDate, _courseSessionHour, _weekday, _sessionId, _instructorId, _roomId);
+        insert into CourseSessions (courseId, offeringId, sessDate, sessHour, weekday, sessionId, employeeId, roomId)
+        values (_courseId, _offeringId, _courseSessionDate, _courseSessionHour, _weekday, _sessionId, _instructorId, _roomId);
 	ELSE 
 		RAISE EXCEPTION 'Session date must be at least 10 days after registration deadline.';
     END IF;
@@ -1332,13 +1336,13 @@ BEGIN
     IF _courseSessionDate < sDate THEN
         update CourseOfferings
         set startDate = _courseSessionDate
-        where courseId = _courseId and launchDate = _launchDate;
+        where courseId = _courseId and offeringId = _offeringId;
     END IF;
 
     IF _courseSessionDate > eDate THEN
         update CourseOfferings
         set endDate = _courseSessionDate
-        where courseId = _courseId and launchDate = _launchDate;
+        where courseId = _courseId and offeringId = _offeringId;
     END IF;
 END;
 $$ language plpgsql;
@@ -1661,6 +1665,34 @@ create trigger employee_depart_date_trigger
 before insert or update on Employees
 for each row execute function employee_depart_date_function();
 
+-- Trigger to ensure that an instructor specializes in at least one course area.
+create or replace function at_least_one_specialization_function()
+returns trigger as $$
+begin
+    if (TG_OP = 'INSERT' or TG_OP = 'UPDATE') then
+        if not exists(select 1 from Specialises where employeeId = new.employeeId) then
+            raise exception 'An instructor must specialize in at least one course area......';
+        end if;
+        return null;
+    elsif (TG_OP = 'DELETE') then
+        if (select count(areaName) from Specialises where employeeId = old.employeeId) = 1 then
+            raise exception 'An instructor must specialize in at least one course area.';
+            return null;
+        end if;
+        return old;
+    end if;
+end;
+$$ language plpgsql;
+
+create constraint trigger at_least_one_specialization_trigger
+after insert or update on Instructors
+deferrable initially deferred
+for each row execute function at_least_one_specialization_function();
+
+create trigger at_least_one_specialization_trigger1
+before delete on Specialises
+for each row execute function at_least_one_specialization_function();
+
 -- Trigger to ensure valid records are inserted into FTSalaries table
 create or replace function fulltimer_salaries_function()
 returns trigger as $$
@@ -1905,9 +1937,9 @@ BEGIN
 			RAISE EXCEPTION 'Unable to delete Course Sessions as number of registrations is more than seating capacity of Course Offering.';
 			RETURN NULL;
 		END IF;
-		UPDATE CourseOfferings co
-		SET co.seatingCapacity = calSeats
-		WHERE courseId = OLD.courseId AND co.offeringId = OLD.offeringId;	
+		UPDATE CourseOfferings
+		SET seatingCapacity = calSeats
+		WHERE courseId = OLD.courseId AND offeringId = OLD.offeringId;	
 	END IF;
 	RETURN NEW;
 	
@@ -2097,7 +2129,7 @@ DECLARE
 	currMaxId INT;
 	newId INT;
 BEGIN
-	SELECT MAX(offeringId) INTO currMaxId
+	SELECT coalesce(MAX(offeringId), 0) INTO currMaxId
 	FROM CourseOfferings
     WHERE courseId = NEW.courseId ;
 	
@@ -2115,14 +2147,13 @@ BEFORE INSERT ON CourseOfferings
 FOR EACH ROW EXECUTE FUNCTION set_offeringId_func();
 
 -- Trigger to take care of session id sequence
-
 CREATE OR REPLACE FUNCTION set_sessionId_func() RETURNS TRIGGER
 AS $$
 DECLARE
 	currMaxId INT;
 	newId INT;
 BEGIN
-	SELECT MAX(sessionId) INTO currMaxId
+	SELECT coalesce(MAX(sessionId), 0) INTO currMaxId
 	FROM CourseSessions
     WHERE courseId = NEW.courseId AND offeringId = NEW.offeringId;
 	
