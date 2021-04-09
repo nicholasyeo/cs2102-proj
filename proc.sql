@@ -336,10 +336,6 @@ BEGIN
 	end loop;
 	
 	if (tempCounter < numTarget) then
-		raise notice 'Course id: %', cid;
-		raise notice 'Course launch date: %', ldate;
-		raise notice 'What do we have: %', tempCounter;
-		raise notice 'What is our target: %', numTarget;
 		RAISE EXCEPTION 'Current seating capacity sum of Course Offering is less than target number of registration!';
 	else 
 		LOOP
@@ -502,7 +498,6 @@ begin
 	if (pid is null) then
 		raise exception 'This customer has no package under his name!';
 	else
-		raise notice 'package id: %', pid;
 		select packageName, price, numSessions into pName, packagePrice, numFreeSessions
 		from CoursePackages
 		where packageId = pid;
