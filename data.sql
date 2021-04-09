@@ -161,7 +161,9 @@ call add_course_offering(10, 99::MONEY, '2021-02-02'::DATE, '2021-06-17'::DATE, 
 -- course 15, offering 1
 call add_course_offering(15, 99::MONEY, '2021-02-02'::DATE, '2021-06-19'::DATE, 3, 100, ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[9,9], ARRAY[5,5]);
 
-
+-- course 15, offering 2
+call add_course_offering(15, 99::MONEY, '2021-02-03'::DATE, '2021-06-19'::DATE, 3, 1, ARRAY['2021-07-13'::DATE], ARRAY[9], ARRAY[11]);
+call register_session(1, 15, 2, date '2021-07-13', 9, 0);
 ----------------------------- CALL TO ADD CourseSession -----------------------------
 -- _courseId integer, _offeringId integer, _courseSessionDate date, _courseSessionHour integer,
 --    _instructorId integer, _roomId integer
@@ -212,7 +214,7 @@ call buy_course_package(11, 7);
 
 ----------------------------- CALL TO view a customer's course packages -----------------------------
 
-
+-- select * from get_my_course_package(1);
 -- select * from get_my_course_package(2);
 
 ----------------------------- CALL TO register for sessions -----------------------------
@@ -357,7 +359,7 @@ call cancel_registration(7, 7, 2);
 
 ----------------------------- CALL TO get available course sessions -----------------------------
 -- select * from get_available_course_sessions(1,1);
--- select * from get_available_course_sessions(2,2);
+-- select * from get_available_course_sessions(15,1);
 
 
 ----------------------------- CALL TO get a customer's registrations -----------------------------
@@ -377,4 +379,3 @@ call cancel_registration(7, 7, 2);
 -- 2. Tied courses with no registrations
 -- 3. Check last year offerings and next year is excluded
 -- 4. Pays and redeems sum correct
-select * from get_my_course_package(1);

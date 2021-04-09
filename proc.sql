@@ -717,34 +717,39 @@ create or replace function get_my_registrations(
     instructor_name text
 ) as $$
 declare
-    cRedeems cursor for (
-        select *
-        from Redeems R
-        where R.customerId = customer AND (
-            R.courseSessionDate > CURRENT_DATE OR (R.courseSessionDate = CURRENT_DATE
-			AND R.courseSessionHour >= extract(hour from CURRENT_TIME))
+	
+	cur cursor for (
+		with CustomerRedemptions as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from Redeems R
+			where R.customerId = customer AND (
+				R.courseSessionDate > CURRENT_DATE OR (R.courseSessionDate = CURRENT_DATE
+				AND R.courseSessionHour >= extract(hour from CURRENT_TIME))
+			)
+		), CustomerPayments as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from Pays P
+			where P.customerId = customer AND (
+				P.courseSessionDate > CURRENT_DATE OR (P.courseSessionDate = CURRENT_DATE
+				AND P.courseSessionHour >= extract(hour from CURRENT_TIME))
+			)
 		)
-        
+			
+		select *
+		from CustomerRedemptions
+		union
+		select *
+		from CustomerPayments
+		order by courseSessionDate, courseSessionHour asc
 	);
-    cPays cursor for (
-        select *
-        from Pays P
-        where P.customerId = customer AND (
-            P.courseSessionDate > CURRENT_DATE OR (P.courseSessionDate = CURRENT_DATE
-			AND P.courseSessionHour >= extract(hour from CURRENT_TIME))
-		)
-    );
-
     r record;
 
 begin
-
-    open cRedeems;
-    loop
-		raise notice 'Checking';
-        fetch cRedeems into r;
-        exit when not found;
-        select courseTitle into course_name from Courses where r.courseId = courseId;
+	open cur;
+	loop
+		fetch cur into r;
+		exit when not found;
+		select courseTitle into course_name from Courses where r.courseId = courseId;
         select courseFee into course_fee from CourseOfferings where r.courseId = courseId and offeringId = r.offeringId;
         session_date := r.courseSessionDate;
         session_start_hour := r.courseSessionHour;
@@ -759,32 +764,9 @@ begin
 			r.courseSessionDate = sessDate and r.courseSessionHour = sessHour
 			);
         return next;
-	
-	end loop;
-    close cRedeems;
-    open cPays;
-    loop
-		raise notice 'Checking2';
-        fetch cPays into r;
-        exit when not found;
-        select courseTitle into course_name from Courses where r.courseId = courseId;
-        select courseFee into course_fee from CourseOfferings where r.courseId = courseId and offeringId = r.offeringId;
-        session_date := r.courseSessionDate;
-        session_start_hour := r.courseSessionHour;
-        select duration into session_duration from Courses where r.courseId = courseId;
 		
-        select eName into instructor_name
-		from Employees
-		where employeeId = (
-			select employeeId
-			from CourseSessions
-			where r.courseId = courseId and offeringId = r.offeringId and
-			r.courseSessionDate = sessDate and r.courseSessionHour = sessHour
-			);
-        return next;
 	end loop;
-    close cPays;
-
+	close cur;
 END;
 $$ language plpgsql;
 
