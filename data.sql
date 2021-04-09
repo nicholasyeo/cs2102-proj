@@ -88,7 +88,8 @@ INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor) VALUES
 (20, 4, 1),
 (30, 4, 2),
 (40, 5, 3),
-(50, 5, 1);
+(50, 5, 1),
+(1, 7, 1);
 
 
 ---------------------------- CALLS TO INSERT COURSE OFFERINGS -------------------------
@@ -159,7 +160,8 @@ call add_course_offering(10, 99::MONEY, '2021-02-02'::DATE, '2021-06-17'::DATE, 
 
 -- course 15, offering 1
 call add_course_offering(15, 99::MONEY, '2021-02-02'::DATE, '2021-06-19'::DATE, 3, 100, ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[9,9], ARRAY[5,5]);
-	
+
+
 ----------------------------- CALL TO ADD CourseSession -----------------------------
 -- _courseId integer, _offeringId integer, _courseSessionDate date, _courseSessionHour integer,
 --    _instructorId integer, _roomId integer
@@ -193,6 +195,13 @@ call buy_course_package(8, 7);
 call buy_course_package(9, 8);
 call buy_course_package(10, 9);
 call buy_course_package(11, 7);
+
+
+-- -- course 15, offering 2
+-- call add_course_offering(15, 99::MONEY, '2021-02-03'::DATE, '2021-06-19'::DATE, 3, 1, ARRAY['2021-07-13'::DATE], ARRAY[9], ARRAY[11]);
+-- call register_session(1, 15, 2, date '2021-07-13', 9, 0);
+-- -- call register_session(12, 15, 2, date '2021-07-13', 9, 0);
+-- call register_session(2, 15, 2, date '2021-07-13', 9, 1);
 
 -- Error testing
 -- Non existing customer

@@ -2311,6 +2311,8 @@ create or replace function redeem_session_check() returns trigger as $$
 declare
     customerPackageId int;
     pStatus text;
+	currentAttendance int;
+	roomCapacity int;
 BEGIN
     if NEW.customerId not in (select customerId from Customers) then
         raise exception 'Customer does not exist';
@@ -2324,6 +2326,8 @@ BEGIN
         raise exception 'Customer already has an existing redemption of this offering' ;
     elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer has already paid for a session in this course offering';
+	elseif (select packageId from Purchases where new.customerId = customerId) is null then
+		raise exception 'This customer does not have any course packages to redeem a session';
 	elseif (select sessionsLeft from Purchases where NEW.customerId = customerId and new.packageId = packageId) = 0 then
         raise exception 'This customer has no more sessions left in his package!';
 	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
@@ -2331,7 +2335,37 @@ BEGIN
 	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
 		raise exception 'The registration for this course has not started yet!';
     else
-		return new;
+		select count(*) into currentAttendance
+  		from Redeems
+  		where new.courseId = courseId and offeringId = new.offeringId and
+ 		new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour;
+		
+		currentAttendance := currentAttendance + (
+			select count(*)
+			from Pays
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour
+		);
+		
+		select seatingCapacity into roomCapacity
+		from LectureRooms
+		where roomId = (
+			select roomId
+			from CourseSessions
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = sessDate and new.courseSessionHour = sessHour
+		);
+		
+		if (15 = new.courseId and new.offeringId = 2 and
+ 			'2021-07-13' = new.courseSessionDate and 9 = new.courseSessionHour) then
+			raise notice 'Current Attendance: %', currentAttendance;
+			raise notice 'Room Capacity: %', roomCapacity;
+		end if;
+		if (currentAttendance >= roomCapacity) then
+			raise exception 'This session is currently full and will not be accepting students';
+		else
+			return new;
+		end if;
 	end if;
 	
 END;
@@ -2342,6 +2376,8 @@ create or replace function pay_session_check() returns trigger as $$
 declare
     customerPackageId int;
     pStatus text;
+	currentAttendance int;
+	roomCapacity int;
 BEGIN
     if NEW.customerId not in (select customerId from Customers) then
         raise exception 'Customer does not exist';
@@ -2360,7 +2396,37 @@ BEGIN
   	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
   		raise exception 'The registration for this course has not started yet!';
     else
-		return new;
+  		select count(*) into currentAttendance
+  		from Redeems
+  		where new.courseId = courseId and offeringId = new.offeringId and
+ 		new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour;
+		
+		currentAttendance := currentAttendance + (
+			select count(*)
+			from Pays
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour
+		);
+		
+		select seatingCapacity into roomCapacity
+		from LectureRooms
+		where roomId = (
+			select roomId
+			from CourseSessions
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = sessDate and new.courseSessionHour = sessHour
+		);
+		
+		if (15 = new.courseId and new.offeringId = 2 and
+ 			'2021-07-13' = new.courseSessionDate and 9 = new.courseSessionHour) then
+			raise notice 'Current Attendance: %', currentAttendance;
+			raise notice 'Room Capacity: %', roomCapacity;
+		end if;
+		if (currentAttendance >= roomCapacity) then
+			raise exception 'This session is currently full and will not be accepting students';
+		else
+			return new;
+		end if;
 	end if;
 	
 END;
