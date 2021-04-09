@@ -95,7 +95,7 @@ INSERT INTO LectureRooms(seatingCapacity, roomNumber, roomFloor) VALUES
 -- add_course_offering (IN offeringId INT, IN courseId INT, IN courseFee MONEY, IN launchDate DATE, IN registrationDeadline DATE, IN adminId INT, IN numTarget INT, IN sessionDate DATE[], IN sessionStartHr INT[], IN roomId INT[])
 
 -- course 1, offering 1
-call add_course_offering(1, 100::MONEY, '2021-01-01'::DATE, '2021-06-16'::DATE, 2, 50, ARRAY['2021-07-01'::DATE], ARRAY[10], ARRAY[1]);
+call add_course_offering(1, 100::MONEY, '2021-01-01'::DATE, '2021-06-16'::DATE, 2, 20, ARRAY['2021-07-01'::DATE], ARRAY[10], ARRAY[1]);
 
 -- course 1, offering 2
 call add_course_offering(1, 150::MONEY, '2021-01-10'::DATE, '2021-07-20'::DATE, 2, 100, ARRAY['2021-08-02', '2021-08-10', '2021-08-20'::DATE], ARRAY[10,9,15], ARRAY[3,4,5]);
@@ -107,13 +107,13 @@ call add_course_offering(1, 200::MONEY, '2021-03-15'::DATE, '2021-10-15'::DATE, 
 call add_course_offering(2, 100::MONEY, '2021-01-31'::DATE, '2021-05-05'::DATE, 3, 80, ARRAY['2021-05-18', '2021-05-21','2021-05-27'::DATE], ARRAY[9,10,14], ARRAY[7,8,4]);
 
 -- course 2, offering 2	
-call add_course_offering(2, 99::MONEY, '2021-02-01'::DATE, '2021-06-14'::DATE, 3, 100, ARRAY['2023-02-02'::DATE], ARRAY[14], ARRAY[1]);
+call add_course_offering(2, 99::MONEY, '2021-02-01'::DATE, '2021-06-14'::DATE, 3, 20, ARRAY['2023-02-02'::DATE], ARRAY[14], ARRAY[1]);
 						  
 -- course 2, offering 3
-call add_course_offering(2, 99::MONEY, '2021-02-02'::DATE, '2021-06-14'::DATE, 3, 100, ARRAY['2023-02-03'::DATE], ARRAY[10], ARRAY[8]);
+call add_course_offering(2, 99::MONEY, '2021-02-02'::DATE, '2021-06-14'::DATE, 3, 30, ARRAY['2023-02-03'::DATE], ARRAY[10], ARRAY[8]);
 
 -- course 3, offering 1
-call add_course_offering(3, 100::MONEY, '2021-01-01'::DATE, '2021-06-17'::DATE, 2, 50, ARRAY['2021-07-15'::DATE], ARRAY[15], ARRAY[3]);
+call add_course_offering(3, 100::MONEY, '2021-01-01'::DATE, '2021-06-17'::DATE, 2, 40, ARRAY['2021-07-15'::DATE], ARRAY[15], ARRAY[3]);
 
 -- course 3, offering 2
 call add_course_offering(3, 150::MONEY, '2021-02-17'::DATE, '2021-08-20'::DATE, 3, 110, ARRAY['2021-09-02', '2021-09-06', '2021-09-10'::DATE], ARRAY[10,14,15], ARRAY[2,6,8]);
@@ -122,7 +122,7 @@ call add_course_offering(3, 150::MONEY, '2021-02-17'::DATE, '2021-08-20'::DATE, 
 call add_course_offering(3, 200::MONEY, '2021-03-18'::DATE, '2021-09-25'::DATE, 2, 150, ARRAY['2021-10-05', '2021-10-07', '2021-10-15' ::DATE], ARRAY[9,10,11], ARRAY[10,4,4]);
 
 -- course 4, offering 1
-call add_course_offering(4, 100::MONEY, '2021-01-01'::DATE, '2021-06-18'::DATE, 2, 50, ARRAY['2021-07-16' ::DATE], ARRAY[15], ARRAY[2]);
+call add_course_offering(4, 100::MONEY, '2021-01-01'::DATE, '2021-06-18'::DATE, 2, 20, ARRAY['2021-07-16' ::DATE], ARRAY[15], ARRAY[2]);
 
 -- course 4, offering 2
 call add_course_offering(4, 150::MONEY, '2021-03-10'::DATE, '2021-08-20'::DATE, 2, 150, ARRAY['2021-09-06', '2021-09-07', '2021-09-14' ::DATE], ARRAY[9,10,14], ARRAY[6,6,5]);
@@ -131,7 +131,7 @@ call add_course_offering(4, 150::MONEY, '2021-03-10'::DATE, '2021-08-20'::DATE, 
 call add_course_offering(4, 200::MONEY, '2021-04-03'::DATE, '2021-09-13'::DATE, 2, 100, ARRAY['2021-09-24', '2021-09-27'::DATE], ARRAY[10,14], ARRAY[4,5]);	
 
 -- course 5, offering 1
-call add_course_offering(5, 100::MONEY, '2021-01-01'::DATE, '2021-06-18'::DATE, 2, 50, ARRAY['2021-07-22'::DATE], ARRAY[10], ARRAY[7]);
+call add_course_offering(5, 100::MONEY, '2021-01-01'::DATE, '2021-06-18'::DATE, 2, 20, ARRAY['2021-07-22'::DATE], ARRAY[10], ARRAY[7]);
 
 -- course 5, offering 2
 call add_course_offering(5, 150::MONEY, '2021-02-10'::DATE, '2021-07-15'::DATE, 2, 70, ARRAY['2021-08-02', '2021-08-05', '2021-08-10' ::DATE], ARRAY[9,10,14], ARRAY[9,5,1]);
@@ -140,16 +140,16 @@ call add_course_offering(5, 150::MONEY, '2021-02-10'::DATE, '2021-07-15'::DATE, 
 call add_course_offering(6, 100::MONEY, '2021-01-15'::DATE, '2021-05-07'::DATE, 3, 100, ARRAY['2021-05-20', '2021-05-25', '2021-05-27' ::DATE], ARRAY[11,14,15], ARRAY[6,3,7]);
 
 -- course 6, offering 2	
-call add_course_offering(6, 99::MONEY, '2021-02-01'::DATE, '2021-06-16'::DATE, 3, 100, ARRAY['2021-07-15'::DATE], ARRAY[15], ARRAY[2]);
+call add_course_offering(6, 99::MONEY, '2021-02-01'::DATE, '2021-06-16'::DATE, 3, 30, ARRAY['2021-07-15'::DATE], ARRAY[15], ARRAY[2]);
 
 -- course 7, offering 1
-call add_course_offering(7, 99::MONEY, '2021-02-02'::DATE, '2021-06-14'::DATE, 3, 100, ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,14], ARRAY[5,2]);	
+call add_course_offering(7, 99::MONEY, '2021-02-02'::DATE, '2021-06-14'::DATE, 3, 90, ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,14], ARRAY[5,2]);	
 
 -- course 7, offering 2
-call add_course_offering(7, 99::MONEY, '2021-02-01'::DATE, '2021-06-15'::DATE, 3, 100, ARRAY['2021-07-12'::DATE], ARRAY[15], ARRAY[2]);
+call add_course_offering(7, 99::MONEY, '2021-02-01'::DATE, '2021-06-15'::DATE, 3, 30, ARRAY['2021-07-12'::DATE], ARRAY[15], ARRAY[2]);
 
 -- course 7, offering 3
-call add_course_offering(7, 150::MONEY, '2021-02-03'::DATE, '2021-06-16'::DATE, 3, 50, ARRAY['2021-07-13'::DATE], ARRAY[16], ARRAY[2]);
+call add_course_offering(7, 150::MONEY, '2021-02-03'::DATE, '2021-06-16'::DATE, 3, 30, ARRAY['2021-07-13'::DATE], ARRAY[16], ARRAY[2]);
 
 -- course 8, offering 1
 call add_course_offering(8, 99::MONEY, '2021-02-02'::DATE, '2021-06-18'::DATE, 3, 100, ARRAY['2021-07-12', '2021-07-20'::DATE], ARRAY[15,10], ARRAY[4,10]);					  

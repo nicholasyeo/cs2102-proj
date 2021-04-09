@@ -302,7 +302,7 @@ AS $$
 DECLARE
     offeringId INT;
 	counter INT;
-	countCapacity INT;
+	sumRoomCapacity INT;
 	addDate DATE;
 	addStartHr INT;
 	addRoomId INT;
@@ -313,73 +313,104 @@ DECLARE
     addHours INT ;
     hoursArr INT[];
     newOid INT;
+	tempCounter int;
+	rooms int;
 	
 BEGIN 
 	offeringId := 0; -- Trigger will set the ID correspondingly.
 	counter := 1;
-	countCapacity := 0;
+	sumRoomCapacity := 0;
 	addDate := sessionDate[counter];
     getHour := (SELECT duration FROM Courses cr WHERE cr.courseId = cid);
+	tempCounter := 0;
 	
+	-- This loop sums up the capacity of all the rooms to be added
+	-- If it is less than the target, then raise exception before any insertions
+	foreach rooms in array roomId
 	LOOP
-		IF sessionDate[counter] IS NULL THEN EXIT;
-		END IF;
-		
-		addDate := sessionDate[counter];
-		addStartHr := sessionStartHr[counter];
-		addRoomId := roomId[counter];
+		tempCounter := tempCounter + (
+			select seatingCapacity
+			from LectureRooms lr
+			where lr.roomId = rooms
+		);
+	end loop;
+	
+	if (tempCounter < numTarget) then
+		raise notice 'Course id: %', cid;
+		raise notice 'Course launch date: %', ldate;
+		raise notice 'What do we have: %', tempCounter;
+		raise notice 'What is our target: %', numTarget;
+		RAISE EXCEPTION 'Current seating capacity sum of Course Offering is less than target number of registration!';
+	else 
+		LOOP
+			IF sessionDate[counter] IS NULL THEN EXIT;
+			END IF;
 
-        addHours := addStartHr;
-        hoursArr := ARRAY[]::INT[];
-        LOOP
-            hoursArr := array_append(hoursArr, addhours);
-            addHours:=addHours +1;
-            IF(addHours > addStartHr + getHour -1) THEN 
-            EXIT;
-            END IF;
-        END LOOP;
+			addDate := sessionDate[counter];
+			addStartHr := sessionStartHr[counter];
+			addRoomId := roomId[counter];
 
-		SELECT I.employeeId INTO addInstructorId
-		FROM get_available_instructors(cid, addDate, addDate) AS I
-		WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND NOT EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
-		LIMIT 1;
-		
-		IF (addInstructorId IS NULL ) THEN
+			addHours := addStartHr;
+			hoursArr := ARRAY[]::INT[];
+			LOOP
+				hoursArr := array_append(hoursArr, addhours);
+				addHours:=addHours +1;
+				IF(addHours > addStartHr + getHour -1) THEN 
+				EXIT;
+				END IF;
+			END LOOP;
+
 			SELECT I.employeeId INTO addInstructorId
 			FROM get_available_instructors(cid, addDate, addDate) AS I
-			WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
-			AND monthlyHours + getHour <= 30
+			WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND NOT EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
 			LIMIT 1;
-		END IF;
-		
-		IF (addInstructorId IS NOT NULL) THEN
-			IF (counter = 1) THEN 
-				INSERT INTO CourseOfferings (courseId, offeringId, launchDate, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
-				VALUES (cid, offeringId, ldate, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
-                SELECT co.offeringId INTO newOid
-                FROM CourseOfferings co
-                WHERE co.launchDate = ldate and co.courseId = cid;
-            END IF;
-			SELECT EXTRACT(DOW FROM addDate) INTO getDay;
-			INSERT INTO CourseSessions(offeringId, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
-			VALUES(newOid, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
-			
-			countCapacity := countCapacity + tempCap;
 
-		ELSE 
-			RAISE EXCEPTION 'Unable to find instructors! Course offering addition aborted.';
-			ROLLBACK;
-			EXIT;
-		END IF;
-		
-		COUNTER := COUNTER + 1;
-   
-		
-	END LOOP;
-    
-    IF (countCapacity < numTarget) THEN 
-        RAISE NOTICE 'Current seating capacity of Course Offering is less than target number of registration!';
-    END IF;
+			IF (addInstructorId IS NULL ) THEN
+				SELECT I.employeeId INTO addInstructorId
+				FROM get_available_instructors(cid, addDate, addDate) AS I
+				WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
+				AND monthlyHours + getHour <= 30
+				LIMIT 1;
+			END IF;
+
+			IF (addInstructorId IS NOT NULL) THEN
+
+				-- First element of the arrays
+				IF (counter = 1) THEN
+
+					-- If first element, that means the course offering has not been created
+					INSERT INTO CourseOfferings (courseId, offeringId, launchDate, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
+					VALUES (cid, offeringId, ldate, courseFee, numTarget, registrationDeadline, adminId, sessionDate[1], sessionDate[1], 0, 'available');
+
+					SELECT co.offeringId INTO newOid
+					FROM CourseOfferings co
+					WHERE co.launchDate = ldate and co.courseId = cid;
+				END IF;
+				SELECT EXTRACT(DOW FROM addDate) INTO getDay;
+				INSERT INTO CourseSessions(offeringId, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
+				VALUES(newOid, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
+
+				sumRoomCapacity := sumRoomCapacity + (
+						select seatingCapacity
+						from LectureRooms lr
+						where lr.roomId = addRoomId
+					);
+
+			ELSE 
+				RAISE EXCEPTION 'Unable to find instructors! Course offering addition aborted.';
+				ROLLBACK;
+				EXIT;
+			END IF;
+
+			COUNTER := COUNTER + 1;
+
+
+		END LOOP;
+	end if;
+	
+	update CourseOfferings
+	set seatingCapacity = sumRoomCapacity
+	where CourseOfferings.courseId = cid and CourseOfferings.offeringId = newOid; 
 
 END;		
                                                  
@@ -2064,8 +2095,6 @@ BEGIN
 	WHERE courseId = NEW.courseId;
 	endTime := startTime + teachingDuration-1;
 	counter := startTime;
-	-- raise notice 'Start time is: %', startTime;
-	-- raise notice 'End time is: %', endTime;
 	
 	if (startTime < 9 or startTime > 17) then
 		raise exception 'Unsuitable start/end timing';
@@ -2100,20 +2129,25 @@ BEGIN
 	WHERE courseId = NEW.courseId;
 	endHr := startHr + teachingDuration -1;
 	counter := startHr;
-	LOOP
-		IF EXISTS (SELECT 1
-				   FROM LectureRooms lr INNER JOIN CourseSessions cs ON lr.roomId = cs.roomId
-				   WHERE lr.roomId = NEW.roomId 
-					AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
-			RAISE EXCEPTION 'Lecture room unavailable.';
-			RETURN NULL;
-		END IF;
-		counter := counter + 1;
-		
-		IF (counter > endHr) THEN 
-		RETURN NEW;
-		END IF;
-	END LOOP;
+	
+	if not exists(select 1 from lecturerooms where roomid = new.roomid) then
+		raise exception 'This lecture room does not exist';
+	else
+		LOOP
+			IF EXISTS (SELECT 1
+					   FROM LectureRooms lr INNER JOIN CourseSessions cs ON lr.roomId = cs.roomId
+					   WHERE lr.roomId = NEW.roomId 
+						AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
+				RAISE EXCEPTION 'Lecture room unavailable.';
+				RETURN NULL;
+			END IF;
+			counter := counter + 1;
+
+			IF (counter > endHr) THEN 
+			RETURN NEW;
+			END IF;
+		END LOOP;
+	end if;
 END;
 $$ LANGUAGE PLPGSQL;
 CREATE TRIGGER room_hours_trigger
