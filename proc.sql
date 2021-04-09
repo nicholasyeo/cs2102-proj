@@ -303,7 +303,7 @@ AS $$
 DECLARE
     offeringId INT;
 	counter INT;
-	countCapacity INT;
+	sumRoomCapacity INT;
 	addDate DATE;
 	addStartHr INT;
 	addRoomId INT;
@@ -314,73 +314,100 @@ DECLARE
     addHours INT ;
     hoursArr INT[];
     newOid INT;
+	tempCounter int;
+	rooms int;
 	
 BEGIN 
 	offeringId := 0; -- Trigger will set the ID correspondingly.
 	counter := 1;
-	countCapacity := 0;
+	sumRoomCapacity := 0;
 	addDate := sessionDate[counter];
     getHour := (SELECT duration FROM Courses cr WHERE cr.courseId = cid);
+	tempCounter := 0;
 	
+	-- This loop sums up the capacity of all the rooms to be added
+	-- If it is less than the target, then raise exception before any insertions
+	foreach rooms in array roomId
 	LOOP
-		IF sessionDate[counter] IS NULL THEN EXIT;
-		END IF;
-		
-		addDate := sessionDate[counter];
-		addStartHr := sessionStartHr[counter];
-		addRoomId := roomId[counter];
+		tempCounter := tempCounter + (
+			select seatingCapacity
+			from LectureRooms lr
+			where lr.roomId = rooms
+		);
+	end loop;
+	
+	if (tempCounter < numTarget) then
+		RAISE EXCEPTION 'Current seating capacity sum of Course Offering is less than target number of registration!';
+	else 
+		LOOP
+			IF sessionDate[counter] IS NULL THEN EXIT;
+			END IF;
 
-        addHours := addStartHr;
-        hoursArr := ARRAY[]::INT[];
-        LOOP
-            hoursArr := array_append(hoursArr, addhours);
-            addHours:=addHours +1;
-            IF(addHours > addStartHr + getHour -1) THEN 
-            EXIT;
-            END IF;
-        END LOOP;
+			addDate := sessionDate[counter];
+			addStartHr := sessionStartHr[counter];
+			addRoomId := roomId[counter];
 
-		SELECT I.employeeId INTO addInstructorId
-		FROM get_available_instructors(cid, addDate, addDate) AS I
-		WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND NOT EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
-		LIMIT 1;
-		
-		IF (addInstructorId IS NULL ) THEN
+			addHours := addStartHr;
+			hoursArr := ARRAY[]::INT[];
+			LOOP
+				hoursArr := array_append(hoursArr, addhours);
+				addHours:=addHours +1;
+				IF(addHours > addStartHr + getHour -1) THEN 
+				EXIT;
+				END IF;
+			END LOOP;
+
 			SELECT I.employeeId INTO addInstructorId
 			FROM get_available_instructors(cid, addDate, addDate) AS I
-			WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
-			AND monthlyHours + getHour <= 30
+			WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND NOT EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
 			LIMIT 1;
-		END IF;
-		
-		IF (addInstructorId IS NOT NULL) THEN
-			IF (counter = 1) THEN 
-				INSERT INTO CourseOfferings (courseId, offeringId, launchDate, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
-				VALUES (cid, offeringId, ldate, courseFee, numTarget, registrationDeadline, adminId, 	sessionDate[1], sessionDate[1], 0, 'available');
-                SELECT co.offeringId INTO newOid
-                FROM CourseOfferings co
-                WHERE co.launchDate = ldate and co.courseId = cid;
-            END IF;
-			SELECT EXTRACT(DOW FROM addDate) INTO getDay;
-			INSERT INTO CourseSessions(offeringId, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
-			VALUES(newOid, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
-			
-			countCapacity := countCapacity + tempCap;
 
-		ELSE 
-			RAISE EXCEPTION 'Unable to find instructors! Course offering addition aborted.';
-			ROLLBACK;
-			EXIT;
-		END IF;
-		
-		COUNTER := COUNTER + 1;
-   
-		
-	END LOOP;
-    
-    IF (countCapacity < numTarget) THEN 
-        RAISE NOTICE 'Current seating capacity of Course Offering is less than target number of registration!';
-    END IF;
+			IF (addInstructorId IS NULL ) THEN
+				SELECT I.employeeId INTO addInstructorId
+				FROM get_available_instructors(cid, addDate, addDate) AS I
+				WHERE I.selectedDay = addDate AND I.selectedHours @> hoursArr AND EXISTS (SELECT 1 FROM PartTimers pt WHERE pt.employeeId = I.employeeId) 
+				AND monthlyHours + getHour <= 30
+				LIMIT 1;
+			END IF;
+
+			IF (addInstructorId IS NOT NULL) THEN
+
+				-- First element of the arrays
+				IF (counter = 1) THEN
+
+					-- If first element, that means the course offering has not been created
+					INSERT INTO CourseOfferings (courseId, offeringId, launchDate, courseFee, numRegistrations, registrationDeadline, employeeId, startDate, endDate, seatingCapacity, status)
+					VALUES (cid, offeringId, ldate, courseFee, numTarget, registrationDeadline, adminId, sessionDate[1], sessionDate[1], 0, 'available');
+
+					SELECT co.offeringId INTO newOid
+					FROM CourseOfferings co
+					WHERE co.launchDate = ldate and co.courseId = cid;
+				END IF;
+				SELECT EXTRACT(DOW FROM addDate) INTO getDay;
+				INSERT INTO CourseSessions(offeringId, sessionId, sessDate, sessHour, employeeId, roomId,courseId, weekday)
+				VALUES(newOid, counter, addDate, addStartHr, addInstructorId, addRoomId,cid, getDay); 
+
+				sumRoomCapacity := sumRoomCapacity + (
+						select seatingCapacity
+						from LectureRooms lr
+						where lr.roomId = addRoomId
+					);
+
+			ELSE 
+				RAISE EXCEPTION 'Unable to find instructors! Course offering addition aborted.';
+				ROLLBACK;
+				EXIT;
+			END IF;
+
+			COUNTER := COUNTER + 1;
+
+
+		END LOOP;
+	end if;
+	
+	update CourseOfferings
+	set seatingCapacity = sumRoomCapacity
+	where CourseOfferings.courseId = cid and CourseOfferings.offeringId = newOid; 
 
 END;		
                                                  
@@ -456,7 +483,7 @@ declare
 		select *
 		from Redeems
 		where customerId = customer
-		order by sessionDate, sessionStartHour asc
+		order by courseSessionDate, courseSessionHour asc
 	);
 begin
     
@@ -479,11 +506,15 @@ begin
 			FETCH curs into sess;
 			EXIT WHEN NOT FOUND;
 			if (sess.packageId = pid) then
+				select coursetitle into courseName
+				from Courses
+				where courseId = sess.courseId;
 				sessionInfo = array_append(sessionInfo,
-							 row_to_json(row(
-								 courseName, sessionDate, sessionStartHour)
-										)
-							);
+							json_build_object(
+								 'courseName', courseName,
+								 'sessionDate', sess.courseSessionDate,
+								 'sessionHour',sess.courseSessionHour)
+				);
 			end if;
 		END LOOP;
 		CLOSE curs;
@@ -676,34 +707,39 @@ create or replace function get_my_registrations(
     instructor_name text
 ) as $$
 declare
-    cRedeems cursor for (
-        select *
-        from Redeems R
-        where R.customerId = customer AND (
-            R.courseSessionDate > CURRENT_DATE OR (R.courseSessionDate = CURRENT_DATE
-			AND R.courseSessionHour >= extract(hour from CURRENT_TIME))
+	
+	cur cursor for (
+		with CustomerRedemptions as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from Redeems R
+			where R.customerId = customer AND (
+				R.courseSessionDate > CURRENT_DATE OR (R.courseSessionDate = CURRENT_DATE
+				AND R.courseSessionHour >= extract(hour from CURRENT_TIME))
+			)
+		), CustomerPayments as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from Pays P
+			where P.customerId = customer AND (
+				P.courseSessionDate > CURRENT_DATE OR (P.courseSessionDate = CURRENT_DATE
+				AND P.courseSessionHour >= extract(hour from CURRENT_TIME))
+			)
 		)
-        
+			
+		select *
+		from CustomerRedemptions
+		union
+		select *
+		from CustomerPayments
+		order by courseSessionDate, courseSessionHour asc
 	);
-    cPays cursor for (
-        select *
-        from Pays P
-        where P.customerId = customer AND (
-            P.courseSessionDate > CURRENT_DATE OR (P.courseSessionDate = CURRENT_DATE
-			AND P.courseSessionHour >= extract(hour from CURRENT_TIME))
-		)
-    );
-
     r record;
 
 begin
-
-    open cRedeems;
-    loop
-		raise notice 'Checking';
-        fetch cRedeems into r;
-        exit when not found;
-        select courseTitle into course_name from Courses where r.courseId = courseId;
+	open cur;
+	loop
+		fetch cur into r;
+		exit when not found;
+		select courseTitle into course_name from Courses where r.courseId = courseId;
         select courseFee into course_fee from CourseOfferings where r.courseId = courseId and offeringId = r.offeringId;
         session_date := r.courseSessionDate;
         session_start_hour := r.courseSessionHour;
@@ -718,32 +754,9 @@ begin
 			r.courseSessionDate = sessDate and r.courseSessionHour = sessHour
 			);
         return next;
-	
-	end loop;
-    close cRedeems;
-    open cPays;
-    loop
-		raise notice 'Checking2';
-        fetch cPays into r;
-        exit when not found;
-        select courseTitle into course_name from Courses where r.courseId = courseId;
-        select courseFee into course_fee from CourseOfferings where r.courseId = courseId and offeringId = r.offeringId;
-        session_date := r.courseSessionDate;
-        session_start_hour := r.courseSessionHour;
-        select duration into session_duration from Courses where r.courseId = courseId;
 		
-        select eName into instructor_name
-		from Employees
-		where employeeId = (
-			select employeeId
-			from CourseSessions
-			where r.courseId = courseId and offeringId = r.offeringId and
-			r.courseSessionDate = sessDate and r.courseSessionHour = sessHour
-			);
-        return next;
 	end loop;
-    close cPays;
-
+	close cur;
 END;
 $$ language plpgsql;
 
@@ -2056,8 +2069,6 @@ BEGIN
 	WHERE courseId = NEW.courseId;
 	endTime := startTime + teachingDuration-1;
 	counter := startTime;
-	-- raise notice 'Start time is: %', startTime;
-	-- raise notice 'End time is: %', endTime;
 	
 	if (startTime < 9 or startTime > 17) then
 		raise exception 'Unsuitable start/end timing';
@@ -2092,20 +2103,25 @@ BEGIN
 	WHERE courseId = NEW.courseId;
 	endHr := startHr + teachingDuration -1;
 	counter := startHr;
-	LOOP
-		IF EXISTS (SELECT 1
-				   FROM LectureRooms lr INNER JOIN CourseSessions cs ON lr.roomId = cs.roomId
-				   WHERE lr.roomId = NEW.roomId 
-					AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
-			RAISE EXCEPTION 'Lecture room unavailable.';
-			RETURN NULL;
-		END IF;
-		counter := counter + 1;
-		
-		IF (counter > endHr) THEN 
-		RETURN NEW;
-		END IF;
-	END LOOP;
+	
+	if not exists(select 1 from lecturerooms where roomid = new.roomid) then
+		raise exception 'This lecture room does not exist';
+	else
+		LOOP
+			IF EXISTS (SELECT 1
+					   FROM LectureRooms lr INNER JOIN CourseSessions cs ON lr.roomId = cs.roomId
+					   WHERE lr.roomId = NEW.roomId 
+						AND cs.sessDate = NEW.sessDate AND cs.sessHour = counter) THEN 
+				RAISE EXCEPTION 'Lecture room unavailable.';
+				RETURN NULL;
+			END IF;
+			counter := counter + 1;
+
+			IF (counter > endHr) THEN 
+			RETURN NEW;
+			END IF;
+		END LOOP;
+	end if;
 END;
 $$ LANGUAGE PLPGSQL;
 CREATE TRIGGER room_hours_trigger
@@ -2269,6 +2285,8 @@ create or replace function redeem_session_check() returns trigger as $$
 declare
     customerPackageId int;
     pStatus text;
+	currentAttendance int;
+	roomCapacity int;
 BEGIN
     if NEW.customerId not in (select customerId from Customers) then
         raise exception 'Customer does not exist';
@@ -2282,6 +2300,8 @@ BEGIN
         raise exception 'Customer already has an existing redemption of this offering' ;
     elseif exists (select 1 from Pays where NEW.customerId = customerId and courseId = NEW.courseId and NEW.offeringId = offeringId) then
         raise exception 'Customer has already paid for a session in this course offering';
+	elseif (select packageId from Purchases where new.customerId = customerId) is null then
+		raise exception 'This customer does not have any course packages to redeem a session';
 	elseif (select sessionsLeft from Purchases where NEW.customerId = customerId and new.packageId = packageId) = 0 then
         raise exception 'This customer has no more sessions left in his package!';
 	elseif current_date > (select registrationDeadline from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
@@ -2289,7 +2309,32 @@ BEGIN
 	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
 		raise exception 'The registration for this course has not started yet!';
     else
-		return new;
+		select count(*) into currentAttendance
+  		from Redeems
+  		where new.courseId = courseId and offeringId = new.offeringId and
+ 		new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour;
+		
+		currentAttendance := currentAttendance + (
+			select count(*)
+			from Pays
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour
+		);
+		
+		select seatingCapacity into roomCapacity
+		from LectureRooms
+		where roomId = (
+			select roomId
+			from CourseSessions
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = sessDate and new.courseSessionHour = sessHour
+		);
+
+		if (currentAttendance >= roomCapacity) then
+			raise exception 'This session is currently full and will not be accepting students';
+		else
+			return new;
+		end if;
 	end if;
 	
 END;
@@ -2300,6 +2345,8 @@ create or replace function pay_session_check() returns trigger as $$
 declare
     customerPackageId int;
     pStatus text;
+	currentAttendance int;
+	roomCapacity int;
 BEGIN
     if NEW.customerId not in (select customerId from Customers) then
         raise exception 'Customer does not exist';
@@ -2318,7 +2365,32 @@ BEGIN
   	elseif current_date < (select launchDate from CourseOfferings where new.courseId = courseId and new.offeringId = offeringId) then
   		raise exception 'The registration for this course has not started yet!';
     else
-		return new;
+  		select count(*) into currentAttendance
+  		from Redeems
+  		where new.courseId = courseId and offeringId = new.offeringId and
+ 		new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour;
+		
+		currentAttendance := currentAttendance + (
+			select count(*)
+			from Pays
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = courseSessionDate and new.courseSessionHour = courseSessionHour
+		);
+		
+		select seatingCapacity into roomCapacity
+		from LectureRooms
+		where roomId = (
+			select roomId
+			from CourseSessions
+			where new.courseId = courseId and offeringId = new.offeringId and
+			new.courseSessionDate = sessDate and new.courseSessionHour = sessHour
+		);
+		
+		if (currentAttendance >= roomCapacity) then
+			raise exception 'This session is currently full and will not be accepting students';
+		else
+			return new;
+		end if;
 	end if;
 	
 END;
@@ -2350,9 +2422,12 @@ begin
      where packageId = new.packageId;
     
      --check constraint "Each customer can have at most one active or partially active package."
-     select count(customerid) into num_of_active_pactive
-     from Purchases
-     where customerId = new.customerId AND sessionsLeft > 0;
+     select count(*) into num_of_active_pactive
+     from PurchasesView
+     where customerId = new.customerId and (
+		 packageStatus = 'active' or
+		 packageStatus = 'partially active'
+		 );
 
      if (customerCC is null) or (newPackage is null) or (cid is null)  then
          raise exception 'Invalid details given';
