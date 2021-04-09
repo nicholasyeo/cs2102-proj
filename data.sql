@@ -196,13 +196,6 @@ call buy_course_package(9, 8);
 call buy_course_package(10, 9);
 call buy_course_package(11, 7);
 
-
--- -- course 15, offering 2
--- call add_course_offering(15, 99::MONEY, '2021-02-03'::DATE, '2021-06-19'::DATE, 3, 1, ARRAY['2021-07-13'::DATE], ARRAY[9], ARRAY[11]);
--- call register_session(1, 15, 2, date '2021-07-13', 9, 0);
--- -- call register_session(12, 15, 2, date '2021-07-13', 9, 0);
--- call register_session(2, 15, 2, date '2021-07-13', 9, 1);
-
 -- Error testing
 -- Non existing customer
 -- call buy_course_package(50, 2);
@@ -219,7 +212,7 @@ call buy_course_package(11, 7);
 
 ----------------------------- CALL TO view a customer's course packages -----------------------------
 
--- select * from get_my_course_package(1);
+
 -- select * from get_my_course_package(2);
 
 ----------------------------- CALL TO register for sessions -----------------------------
@@ -248,7 +241,7 @@ call register_session(15, 5, 1, date '2021-07-22', 15,  0);
 -- Redeems
 
 call register_session(1, 2, 3, date '2023-02-03', 10, 1);
-
+call register_session(1, 6, 2, date '2021-07-16', 14, 1);
 call register_session(2, 2, 2, date '2023-02-02', 14, 1);
 
 call register_session(3, 2, 2, date '2023-02-02', 14, 1);
@@ -349,14 +342,14 @@ call register_session(7, 2, 3, date '2023-02-03', 10, 1);
 call register_session(7, 7, 2, date '2021-07-12', 15, 1);
 
 
-call register_session(1, 6, 2, date '2021-07-16', 14, 1);
+-- call register_session(1, 6, 2, date '2021-07-16', 14, 1);
 
 call cancel_registration(1, 5, 1);
 
 call cancel_registration(7, 2, 3);
 call cancel_registration(7, 7, 2);
 
-call cancel_registration(1, 6, 2);
+-- call cancel_registration(1, 6, 2);
 
 ----------------------------- CALL TO get available course offerings -----------------------------
 
@@ -384,3 +377,4 @@ call cancel_registration(1, 6, 2);
 -- 2. Tied courses with no registrations
 -- 3. Check last year offerings and next year is excluded
 -- 4. Pays and redeems sum correct
+select * from get_my_course_package(1);

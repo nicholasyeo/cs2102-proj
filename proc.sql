@@ -488,7 +488,7 @@ declare
 		select *
 		from Redeems
 		where customerId = customer
-		order by sessionDate, sessionStartHour asc
+		order by courseSessionDate, courseSessionHour asc
 	);
 begin
     
@@ -502,6 +502,7 @@ begin
 	if (pid is null) then
 		raise exception 'This customer has no package under his name!';
 	else
+		raise notice 'package id: %', pid;
 		select packageName, price, numSessions into pName, packagePrice, numFreeSessions
 		from CoursePackages
 		where packageId = pid;
@@ -511,11 +512,15 @@ begin
 			FETCH curs into sess;
 			EXIT WHEN NOT FOUND;
 			if (sess.packageId = pid) then
+				select coursetitle into courseName
+				from Courses
+				where courseId = sess.courseId;
 				sessionInfo = array_append(sessionInfo,
-							 row_to_json(row(
-								 courseName, sessionDate, sessionStartHour)
-										)
-							);
+							json_build_object(
+								 'courseName', courseName,
+								 'sessionDate', sess.courseSessionDate,
+								 'sessionHour',sess.courseSessionHour)
+				);
 			end if;
 		END LOOP;
 		CLOSE curs;
@@ -2355,12 +2360,7 @@ BEGIN
 			where new.courseId = courseId and offeringId = new.offeringId and
 			new.courseSessionDate = sessDate and new.courseSessionHour = sessHour
 		);
-		
-		if (15 = new.courseId and new.offeringId = 2 and
- 			'2021-07-13' = new.courseSessionDate and 9 = new.courseSessionHour) then
-			raise notice 'Current Attendance: %', currentAttendance;
-			raise notice 'Room Capacity: %', roomCapacity;
-		end if;
+
 		if (currentAttendance >= roomCapacity) then
 			raise exception 'This session is currently full and will not be accepting students';
 		else
@@ -2417,11 +2417,6 @@ BEGIN
 			new.courseSessionDate = sessDate and new.courseSessionHour = sessHour
 		);
 		
-		if (15 = new.courseId and new.offeringId = 2 and
- 			'2021-07-13' = new.courseSessionDate and 9 = new.courseSessionHour) then
-			raise notice 'Current Attendance: %', currentAttendance;
-			raise notice 'Room Capacity: %', roomCapacity;
-		end if;
 		if (currentAttendance >= roomCapacity) then
 			raise exception 'This session is currently full and will not be accepting students';
 		else
@@ -2458,9 +2453,12 @@ begin
      where packageId = new.packageId;
     
      --check constraint "Each customer can have at most one active or partially active package."
-     select count(customerid) into num_of_active_pactive
-     from Purchases
-     where customerId = new.customerId AND sessionsLeft > 0;
+     select count(*) into num_of_active_pactive
+     from PurchasesView
+     where customerId = new.customerId and (
+		 packageStatus = 'active' or
+		 packageStatus = 'partially active'
+		 );
 
      if (customerCC is null) or (newPackage is null) or (cid is null)  then
          raise exception 'Invalid details given';
