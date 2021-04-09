@@ -106,6 +106,7 @@ declare
 begin
     select ccNumber into oldCcNum from Owns where customerId = cid;
     update CreditCards set ccNumber = newCcNum, ccExpiryDate = newExpiryDate, ccCvv = newCvv where ccNumber = oldCcNum;
+    update Owns set ccNumber = newCcNum where customerId = cid;
 end;
 $$ language plpgsql;
 
@@ -129,7 +130,7 @@ begin
     return query (
         select employeeId, ename
         from Specialises natural join Employees
-        where areaName = courseArea
+        where areaName = courseArea and (departDate is null or departDate >= sessionDate)
         and employeeId not in (
             select employeeId
             from CourseSessions natural join Courses
@@ -150,7 +151,7 @@ begin
 end;
 $$ language plpgsql;
 
--- 7. get_available_instructors //done
+-- 7. get_available_instructors
 CREATE OR REPLACE FUNCTION get_available_instructors(IN course INT, IN startDate DATE, IN endDate DATE) 
 RETURNS TABLE (employeeId INT, instructorName TEXT, monthlyHours INT, selectedDay DATE, selectedHours INT[]) 
 AS $$
@@ -223,7 +224,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- 8. find_rooms //done
+-- 8. find_rooms
 CREATE OR REPLACE FUNCTION find_rooms(IN selectedDate DATE, IN selectedHour INT, IN selectedDuration INT) 
 RETURNS TABLE (roomId INT) 
 AS $$
@@ -245,7 +246,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- 9. get_available_rooms //done
+-- 9. get_available_rooms
 CREATE OR REPLACE FUNCTION get_available_rooms(IN startDate DATE, IN endDate DATE) 
 RETURNS TABLE (roomId INT, seatingCapacity INT, selectedDay DATE, selectedHours INT[]) 
 AS $$
@@ -385,14 +386,14 @@ END;
                                                  
 $$ LANGUAGE plpgsql;
 
--- 11. add_course_packages //done
+-- 11. add_course_packages
 CREATE OR REPLACE PROCEDURE add_course_package (packageName TEXT, numSessions INT, startDate DATE, endDate DATE, price MONEY)
 AS $$
 		INSERT INTO CoursePackages (price, startDate, endDate, numSessions, packageName)
 		VALUES (price, startDate, endDate, numSessions, packageName); 				 
 $$ LANGUAGE SQL; 
 
--- 12.get_available_course_pacakages //donegit
+-- 12.get_available_course_pacakages
 CREATE OR REPLACE FUNCTION get_available_course_packages ()
 RETURNS TABLE (packageName TEXT, numSessions INT, endDate DATE, price MONEY)
 AS $$
@@ -416,8 +417,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
---Function 13
-
+-- 13. buy_course_package
 create or replace procedure buy_course_package(
     customer INT, pid INT 
 ) AS $$
@@ -436,8 +436,7 @@ begin
 END;
 $$ language plpgsql;
 
---Function 14
-
+-- 14. get_my_course_package
 create or replace function get_my_course_package(
     customer INT
 ) returns json AS $$
@@ -502,8 +501,7 @@ begin
 END;
 $$ language plpgsql;
 
--- Function 15
-
+-- 15. get_available_course_offerings
 create or replace function get_available_course_offerings()
 returns table(
     cTitle text,
@@ -560,8 +558,7 @@ begin
 END;
 $$ language plpgsql;
 
---function 16
-
+-- 16. get_available_course_sessions
 create or replace function get_available_course_sessions(
 	course_id int,
     course_offering_id INT
@@ -632,8 +629,7 @@ begin
 END;
 $$ language plpgsql;
 
---Function 17
-
+-- 17. register_session
 create or replace procedure register_session(
     customer int, course_id int, offering_id int, sess_date date, sess_hour int, payment_method int
 ) as $$
@@ -668,8 +664,7 @@ begin
 END;
 $$ language plpgsql;
 
---Function 18
-
+-- 18. get_my_registrations
 create or replace function get_my_registrations(
     customer INT
 ) returns table (
@@ -751,348 +746,6 @@ begin
 
 END;
 $$ language plpgsql;
-
---idea for function 26
--- find inactive custoemrs by group by then sort by desc. the latest date must not be in the recent 6 months
--- then find their most recent 3 courses -> find the areas of these courses
--- use function 15 to find all available course offerings then use these courses area to sift through then return from there
-
---function 26
-
-create or replace function promote_courses()
-returns table (
-    customer_id int,
-    customer_name text,
-    course_area text,
-    course_id int,
-    course_title text,
-    launch_date date,
-    registration_deadline date,
-    fees money
-) as $$
-declare
-    cur cursor for (
-        with InactiveC as (
-			select distinct customerId
-			from Redeems r1
-			where r1.customerId not in (
-				select customerId
-				from Redeems r2
-				where r1.customerId = r2.customerId and
-				(current_date - interval '6 months') <= r2.courseSessionDate
-			)
-			union
-			select distinct customerId
-			from Pays p1
-			where p1.customerId not in (
-				select customerId
-				from Pays p2
-				where p1.customerId = p2.customerId and
-				(current_date - interval '6 months') <= p2.courseSessionDate
-			)            
-			order by customerId asc
-		), InactivePackageCustomers as (
-			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-			from InactiveC natural join Redeems
-			order by customerId asc
-		), InactivePayCustomers as (
-			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-			from InactiveC natural join Pays
-			order by customerId asc
-		), InactiveCustomers as (
-			select * from InactivePayCustomers
-			union
-			select * from InactivePackageCustomers
-		), EmptyCustomers as (
-			select C.customerId, R.courseId, R.offeringId, R.courseSessionDate, R.courseSessionHour
-			from Customers C left outer join Redeems R on C.customerId = R.customerId
-			where C.customerId not in (
-				select distinct customerId
-				from Redeems 
-			) and C.customerId not in (
-				select distinct customerId
-				from Pays 
-			)
-			order by customerId asc
-		)
-
-		select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-		from InactiveCustomers
-		union
-		select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
-		from EmptyCustomers
-		order by customerId asc , courseSessionDate desc
-	);
-
-    r record;
-	customer_name text;
-    currentCustomer int;
-    currentArea  text;
-    courseOfferingArr int[];
-    coursesArr int[];
-	courseAreasArr text[];
-    countCustomer int;
-	i text;
-	x int;
-	b int;
-begin
-
-    currentCustomer = -1;
-    open cur;
-    loop
-        fetch cur into r;
-        exit when not found;
-
-        if currentCustomer = r.customerId then
-
-            if countCustomer < 3 then
-                countCustomer = countCustomer + 1;
-
-                if currentArea <> (select areaName from Courses where courseId = r.courseId) then
-					select customerName into customer_name
-						from Customers
-						where r.customerId = customerId;
-					
-					select areaName into currentArea from Courses where courseId = r.courseId;
-					
-					return query (
-					select case when true then r.customerId end customer_id,
-						case when true then customer_name end customer_name,
-						areaName as course_area,
-						courseId as course_id,
-						courseTitle as course_title, 
-						launchDate as launch_date,
-						registrationDeadline as registration_deadline,
-						courseFee as fees
-					from Courses natural join CourseOfferings
-					where launchDate <= current_date and
-						registrationDeadline >= current_date and
-						areaName = currentArea
-					order by registrationDeadline asc
-					);
-				end if;
-			end if;
-        else
-
-            currentCustomer = r.customerId;
-            countCustomer = 1;
-
-            if r.courseId is null then
-				currentArea = NULL;
-				select customerName into customer_name
-				from Customers
-				where r.customerId = customerId;
-				return query (
-					select case when true then r.customerId end customer_id,
-						case when true then customer_name end customer_name,
-						areaName as course_area,
-						courseId as course_id,
-						courseTitle as course_title, 
-						launchDate as launch_date,
-						registrationDeadline as registration_deadline,
-						courseFee as fees
-					from Courses natural join CourseOfferings
-					where launchDate <= current_date and
-						registrationDeadline >= current_date
-					order by registrationDeadline asc
-				);
-			else
-				select customerName into customer_name
-						from Customers
-						where r.customerId = customerId;
-					
-				select areaName into currentArea from Courses where courseId = r.courseId;
-
-				return query (
-				select case when true then r.customerId end customer_id,
-					case when true then customer_name end customer_name,
-					areaName as course_area, courseId as course_id,
-					courseTitle as course_title, 
-					launchDate as launch_date,
-					registrationDeadline as registration_deadline,
-					courseFee as fees
-				from Courses natural join CourseOfferings
-				where launchDate <= current_date and
-					registrationDeadline >= current_date and
-					areaName = currentArea
-				order by registrationDeadline asc
-				);
-            end if;
-        end if;
-	end loop;
-	close cur;
-end;
-$$ language plpgsql;
-
--- 27
-DROP FUNCTION IF EXISTS top_packages;
-create or replace function top_packages(IN N integer)
-RETURNS TABLE (packageId integer, numSessions integer, price money,
-    startDate date, endDate date, numSold BIGINT) as $$
-BEGIN
-    RETURN QUERY (with TopN as
-        (select distinct Purchases.packageId, count(Purchases.packageId) as numSold 
-        from Purchases 
-        where (EXTRACT(YEAR FROM purchaseDate) = date_part('year', CURRENT_DATE))
-        group by Purchases.packageId
-        order by numSold DESC
-        limit N)
-    , PackagesWithTopN as
-        (select * from CoursePackages natural join TopN)
-    select PackagesWithTopN.packageId, PackagesWithTopN.numSessions, 
-        PackagesWithTopN.price, PackagesWithTopN.startDate, PackagesWithTopN.endDate, PackagesWithTopN.numSold
-    from PackagesWithTopN
-    where exists (
-        select 1 
-        from TopN
-        where PackagesWithTopN.numSold = TopN.numSold
-    ));
-END;
-$$ language plpgsql;
-
-create or replace function view_manager_report()
-returns table (
-    manager_name text,
-    num_managed_courses int,
-    offering_ending_this_year int,
-    net_registration_fee money,
-    highest_course_title text[]
-) as $$
-declare
-    cur cursor for (
-        select employeeId, eName
-        from Managers natural join Employees
-        order by eName asc
-    );
-
-    r record;
-    managedAreas text[];
-    courseArr int[];
-    offeringArr int[];
-    i text;
-    m int;
-    n int;
-    ccPayment money;
-    redemptionPayment money;
-	totalAmount money;
-    highestYet money;
-    top_performing_courses text[];
-	enrollment int;
-begin
-    
-    open cur;
-    loop
-        fetch cur into r;
-        exit when not found;
-        
-        net_registration_fee := 0.00;
-        ccPayment = 0.00;
-        redemptionPayment = 0.00;
-        highestYet = 0;
-		num_managed_courses := 0;
-		manager_name := r.eName;
-		offering_ending_this_year = 0;
-		
-        -- Array of areas managed by manager X
-        managedAreas = array(
-            select areaName
-            from CourseAreas ca
-            where ca.employeeId = r.employeeId
-        );
-        -- For each of the areas managed, loop
-        foreach i in array managedAreas
-        loop
-            -- Array of courses corresponding to course area Y, managed by manager X
-            courseArr = array (
-                select courseId
-                from Courses c
-                where c.areaName = i
-            );
-            -- loop over every course of course area Y that is managed by manager X
-            foreach m in array courseArr
-            loop
-				num_managed_courses := num_managed_courses + 1;
-                offeringArr = array (
-                    select offeringId
-                    from CourseOfferings co
-                    where co.courseId = m and extract(year from co.endDate) = extract(year from current_date) 
-                );
-
-                
-                -- loop over every offering of course Z of course area Y that is managed by manager X
-                foreach n in array offeringArr
-                loop
-					offering_ending_this_year := offering_ending_this_year + 1;
-					
-					select numEnrolled into enrollment
-					from PayAttendance oa
-					where oa.courseId = m and oa.offeringId = n;
-                        
-                    ccPayment = coalesce((
-                        select courseFee * enrollment
-                        from CourseOfferings co1
-                        where co1.courseId = m and co1.offeringId = n
-                        ), 0.00::money);
-					
-					-- This is summing of late cancellation (no refund)
-					ccPayment := ccPayment + coalesce((
-                        select sum(courseFee)
-                        from CourseOfferings natural join Cancels
-                        where courseId = m and offeringId = n and paymentMode = 'pays'
-						and isEarlyCancellation = false
-                        ), 0.00::money);
-
-					-- This is summing of early cancellation (90% refund)
-					ccPayment := ccPayment + coalesce((
-                        select sum(courseFee - refundAmt)
-                        from CourseOfferings natural join Cancels
-                        where courseId = m and offeringId = n and paymentMode = 'pays'
-						and isEarlyCancellation = true
-                        ), 0.00::money);
-						
-                    redemptionPayment = coalesce((
-                        select sum(price/numSessions)
-                        from (Redeems natural join CoursePackages) as rp
-                        where rp.courseId = m and rp.offeringId = n
-                    ), 0.00::money);
-					
-					-- This is summing up redemptions that were cancelled late
-					-- because this is counting as one redemption
-
-					redemptionPayment := redemptionPayment + coalesce((
-                        select sum(price/numSessions)
-                        from (Cancels natural join Purchases natural join CoursePackages) as cp
-                        where cp.courseId = m and cp.offeringId = n and isEarlyCancellation = false
-                    ), 0.00::money);
-					
-					
-					totalAmount := ccPayment + redemptionPayment;
-					net_registration_fee := net_registration_fee + totalAmount;
-					
-                    if totalAmount > highestYet then
-                        highestYet = totalAmount;
-                        top_performing_courses = array(
-                            select coursetitle
-                            from Courses c1
-                            where c1.courseId = m
-                        );
-                    elseif totalAmount = highestYet then
-                        top_performing_courses = array_append(top_performing_courses, (
-                            select courseTitle
-                            from Courses c1
-                            where c1.courseId = m
-                        ));
-                    end if;
-                end loop;
-            end loop;
-        end loop;
-		highest_course_title := top_performing_courses;
-		return next;
-    end loop;
-    close cur;
-end;
-$$ language plpgsql;
-
 
 -- 19. update_course_session
 DROP PROCEDURE IF EXISTS update_course_session;
@@ -1225,7 +878,7 @@ BEGIN
 END;
 $$ language plpgsql;
 
--- Q21. update_instructor
+-- 21. update_instructor
 DROP PROCEDURE IF EXISTS update_instructor;
 create or replace procedure update_instructor(_courseId integer, _offeringId integer, _courseSessionDate date, 
     _courseSessionHour integer, _newInstructorId integer)
@@ -1242,7 +895,7 @@ END;
 $$ language plpgsql;
 
 
--- Q22. update_room
+-- 22. update_room
 DROP PROCEDURE IF EXISTS update_room;
 create or replace procedure update_room(_courseId integer, _offeringId integer, _courseSessionDate date, 
     _courseSessionHour integer, _sessionId integer, _newRoomId integer)
@@ -1415,7 +1068,202 @@ begin
 end;
 $$ language plpgsql;
 
---28. popular_courses
+-- 26. promote_courses
+-- find inactive custoemrs by group by then sort by desc. the latest date must not be in the recent 6 months
+-- then find their most recent 3 courses -> find the areas of these courses
+-- use function 15 to find all available course offerings then use these courses area to sift through then return from there
+create or replace function promote_courses()
+returns table (
+    customer_id int,
+    customer_name text,
+    course_area text,
+    course_id int,
+    course_title text,
+    launch_date date,
+    registration_deadline date,
+    fees money
+) as $$
+declare
+    cur cursor for (
+        with InactiveC as (
+			select distinct customerId
+			from Redeems r1
+			where r1.customerId not in (
+				select customerId
+				from Redeems r2
+				where r1.customerId = r2.customerId and
+				(current_date - interval '6 months') <= r2.courseSessionDate
+			)
+			union
+			select distinct customerId
+			from Pays p1
+			where p1.customerId not in (
+				select customerId
+				from Pays p2
+				where p1.customerId = p2.customerId and
+				(current_date - interval '6 months') <= p2.courseSessionDate
+			)            
+			order by customerId asc
+		), InactivePackageCustomers as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from InactiveC natural join Redeems
+			order by customerId asc
+		), InactivePayCustomers as (
+			select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+			from InactiveC natural join Pays
+			order by customerId asc
+		), InactiveCustomers as (
+			select * from InactivePayCustomers
+			union
+			select * from InactivePackageCustomers
+		), EmptyCustomers as (
+			select C.customerId, R.courseId, R.offeringId, R.courseSessionDate, R.courseSessionHour
+			from Customers C left outer join Redeems R on C.customerId = R.customerId
+			where C.customerId not in (
+				select distinct customerId
+				from Redeems 
+			) and C.customerId not in (
+				select distinct customerId
+				from Pays 
+			)
+			order by customerId asc
+		)
+
+		select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+		from InactiveCustomers
+		union
+		select customerId, courseId, offeringId, courseSessionDate, courseSessionHour
+		from EmptyCustomers
+		order by customerId asc , courseSessionDate desc
+	);
+
+    r record;
+	customer_name text;
+    currentCustomer int;
+    currentArea  text;
+    courseOfferingArr int[];
+    coursesArr int[];
+	courseAreasArr text[];
+    countCustomer int;
+	i text;
+	x int;
+	b int;
+begin
+
+    currentCustomer = -1;
+    open cur;
+    loop
+        fetch cur into r;
+        exit when not found;
+
+        if currentCustomer = r.customerId then
+
+            if countCustomer < 3 then
+                countCustomer = countCustomer + 1;
+
+                if currentArea <> (select areaName from Courses where courseId = r.courseId) then
+					select customerName into customer_name
+						from Customers
+						where r.customerId = customerId;
+					
+					select areaName into currentArea from Courses where courseId = r.courseId;
+					
+					return query (
+					select case when true then r.customerId end customer_id,
+						case when true then customer_name end customer_name,
+						areaName as course_area,
+						courseId as course_id,
+						courseTitle as course_title, 
+						launchDate as launch_date,
+						registrationDeadline as registration_deadline,
+						courseFee as fees
+					from Courses natural join CourseOfferings
+					where launchDate <= current_date and
+						registrationDeadline >= current_date and
+						areaName = currentArea
+					order by registrationDeadline asc
+					);
+				end if;
+			end if;
+        else
+
+            currentCustomer = r.customerId;
+            countCustomer = 1;
+
+            if r.courseId is null then
+				currentArea = NULL;
+				select customerName into customer_name
+				from Customers
+				where r.customerId = customerId;
+				return query (
+					select case when true then r.customerId end customer_id,
+						case when true then customer_name end customer_name,
+						areaName as course_area,
+						courseId as course_id,
+						courseTitle as course_title, 
+						launchDate as launch_date,
+						registrationDeadline as registration_deadline,
+						courseFee as fees
+					from Courses natural join CourseOfferings
+					where launchDate <= current_date and
+						registrationDeadline >= current_date
+					order by registrationDeadline asc
+				);
+			else
+				select customerName into customer_name
+						from Customers
+						where r.customerId = customerId;
+					
+				select areaName into currentArea from Courses where courseId = r.courseId;
+
+				return query (
+				select case when true then r.customerId end customer_id,
+					case when true then customer_name end customer_name,
+					areaName as course_area, courseId as course_id,
+					courseTitle as course_title, 
+					launchDate as launch_date,
+					registrationDeadline as registration_deadline,
+					courseFee as fees
+				from Courses natural join CourseOfferings
+				where launchDate <= current_date and
+					registrationDeadline >= current_date and
+					areaName = currentArea
+				order by registrationDeadline asc
+				);
+            end if;
+        end if;
+	end loop;
+	close cur;
+end;
+$$ language plpgsql;
+
+-- 27. top_packages
+DROP FUNCTION IF EXISTS top_packages;
+create or replace function top_packages(IN N integer)
+RETURNS TABLE (packageId integer, numSessions integer, price money,
+    startDate date, endDate date, numSold BIGINT) as $$
+BEGIN
+    RETURN QUERY (with TopN as
+        (select distinct Purchases.packageId, count(Purchases.packageId) as numSold 
+        from Purchases 
+        where (EXTRACT(YEAR FROM purchaseDate) = date_part('year', CURRENT_DATE))
+        group by Purchases.packageId
+        order by numSold DESC
+        limit N)
+    , PackagesWithTopN as
+        (select * from CoursePackages natural join TopN)
+    select PackagesWithTopN.packageId, PackagesWithTopN.numSessions, 
+        PackagesWithTopN.price, PackagesWithTopN.startDate, PackagesWithTopN.endDate, PackagesWithTopN.numSold
+    from PackagesWithTopN
+    where exists (
+        select 1 
+        from TopN
+        where PackagesWithTopN.numSold = TopN.numSold
+    ));
+END;
+$$ language plpgsql;
+
+-- 28. popular_courses
 CREATE OR REPLACE FUNCTION popular_courses () 
 RETURNS TABLE (courseId INT, courseTitle TEXT, areaName TEXT, numOfferings INT, numRegistrations INT)
 AS $$
@@ -1529,6 +1377,150 @@ begin
         end if;
         i := i + 1;
     end loop;
+end;
+$$ language plpgsql;
+
+-- 30. view_manager_report
+create or replace function view_manager_report()
+returns table (
+    manager_name text,
+    num_managed_courses int,
+    offering_ending_this_year int,
+    net_registration_fee money,
+    highest_course_title text[]
+) as $$
+declare
+    cur cursor for (
+        select employeeId, eName
+        from Managers natural join Employees
+        order by eName asc
+    );
+
+    r record;
+    managedAreas text[];
+    courseArr int[];
+    offeringArr int[];
+    i text;
+    m int;
+    n int;
+    ccPayment money;
+    redemptionPayment money;
+	totalAmount money;
+    highestYet money;
+    top_performing_courses text[];
+	enrollment int;
+begin
+    
+    open cur;
+    loop
+        fetch cur into r;
+        exit when not found;
+        
+        net_registration_fee := 0.00;
+        ccPayment = 0.00;
+        redemptionPayment = 0.00;
+        highestYet = 0;
+		num_managed_courses := 0;
+		manager_name := r.eName;
+		offering_ending_this_year = 0;
+		
+        -- Array of areas managed by manager X
+        managedAreas = array(
+            select areaName
+            from CourseAreas ca
+            where ca.employeeId = r.employeeId
+        );
+        -- For each of the areas managed, loop
+        foreach i in array managedAreas
+        loop
+            -- Array of courses corresponding to course area Y, managed by manager X
+            courseArr = array (
+                select courseId
+                from Courses c
+                where c.areaName = i
+            );
+            -- loop over every course of course area Y that is managed by manager X
+            foreach m in array courseArr
+            loop
+				num_managed_courses := num_managed_courses + 1;
+                offeringArr = array (
+                    select offeringId
+                    from CourseOfferings co
+                    where co.courseId = m and extract(year from co.endDate) = extract(year from current_date) 
+                );
+
+                
+                -- loop over every offering of course Z of course area Y that is managed by manager X
+                foreach n in array offeringArr
+                loop
+					offering_ending_this_year := offering_ending_this_year + 1;
+					
+					select numEnrolled into enrollment
+					from PayAttendance oa
+					where oa.courseId = m and oa.offeringId = n;
+                        
+                    ccPayment = coalesce((
+                        select courseFee * enrollment
+                        from CourseOfferings co1
+                        where co1.courseId = m and co1.offeringId = n
+                        ), 0.00::money);
+					
+					-- This is summing of late cancellation (no refund)
+					ccPayment := ccPayment + coalesce((
+                        select sum(courseFee)
+                        from CourseOfferings natural join Cancels
+                        where courseId = m and offeringId = n and paymentMode = 'pays'
+						and isEarlyCancellation = false
+                        ), 0.00::money);
+
+					-- This is summing of early cancellation (90% refund)
+					ccPayment := ccPayment + coalesce((
+                        select sum(courseFee - refundAmt)
+                        from CourseOfferings natural join Cancels
+                        where courseId = m and offeringId = n and paymentMode = 'pays'
+						and isEarlyCancellation = true
+                        ), 0.00::money);
+						
+                    redemptionPayment = coalesce((
+                        select sum(price/numSessions)
+                        from (Redeems natural join CoursePackages) as rp
+                        where rp.courseId = m and rp.offeringId = n
+                    ), 0.00::money);
+					
+					-- This is summing up redemptions that were cancelled late
+					-- because this is counting as one redemption
+
+					redemptionPayment := redemptionPayment + coalesce((
+                        select sum(price/numSessions)
+                        from (Cancels natural join Purchases natural join CoursePackages) as cp
+                        where cp.courseId = m and cp.offeringId = n and isEarlyCancellation = false
+                    ), 0.00::money);
+					
+					
+					totalAmount := ccPayment + redemptionPayment;
+					net_registration_fee := net_registration_fee + totalAmount;
+					
+                    if totalAmount > highestYet then
+                        highestYet = totalAmount;
+                        top_performing_courses = array(
+                            select coursetitle
+                            from Courses c1
+                            where c1.courseId = m
+                        );
+                    elseif totalAmount = highestYet then
+                        top_performing_courses = array_append(top_performing_courses, (
+                            select courseTitle
+                            from Courses c1
+                            where c1.courseId = m
+                        ));
+                    end if;
+                end loop;
+            end loop;
+        end loop;
+		highest_course_title := top_performing_courses;
+		return next;
+    end loop;
+    close cur;
 end;
 $$ language plpgsql;
 
@@ -2443,3 +2435,59 @@ $$ language plpgsql;
 create trigger offering_admin_departed_check_trigger
 before insert or update on CourseOfferings
 for each row execute function offering_admin_departed_check();
+
+-- Trigger to ensure that a customer must have a credit card.
+create or replace function customer_credit_card_function()
+returns trigger as $$
+begin
+    if (TG_OP = 'INSERT' or TG_OP = 'UPDATE') then
+        if not exists(select 1 from Owns where customerId = new.customerId) then
+            raise exception 'A customer must have a credit card.';
+        end if;
+        return null;
+    elsif (TG_OP = 'DELETE') then
+        if not exists(select 1 from Owns where customerId = old.customerId) then
+            raise exception 'A customer must have a credit card.';
+        end if;
+        return null;
+    end if;
+end;
+$$ language plpgsql;
+
+create constraint trigger customer_credit_card_trigger
+after insert or update on Customers
+deferrable initially deferred
+for each row execute function customer_credit_card_function();
+
+create constraint trigger customer_credit_card_trigger1
+after delete on Owns
+deferrable initially deferred
+for each row execute function customer_credit_card_function();
+
+-- Trigger to ensure that a credit card must belong to a customer.
+create or replace function credit_card_customer_function()
+returns trigger as $$
+begin
+    if (TG_OP = 'INSERT' or TG_OP = 'UPDATE') then
+        if not exists(select 1 from Owns where ccNumber = new.ccNumber) then
+            raise exception 'A credit card must belong to a customer.';
+        end if;
+        return null;
+    elsif (TG_OP = 'DELETE') then
+        if not exists(select 1 from Owns where ccNumber = old.ccNumber) then
+            raise exception 'A credit card must belong to a customer.';
+        end if;
+        return null;
+    end if;
+end;
+$$ language plpgsql;
+
+create constraint trigger credit_card_customer_trigger
+after insert or update on CreditCards
+deferrable initially deferred
+for each row execute function credit_card_customer_function();
+
+create constraint trigger credit_card_customer_trigger1
+after delete on Owns
+deferrable initially deferred
+for each row execute function credit_card_customer_function();

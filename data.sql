@@ -40,7 +40,7 @@ call add_customer('Terry', 'Changi', 80000019, 'terry@gmail.com', '0000 0000 000
 call add_customer('Uman', 'Tampines', 80000020, 'uman@gmail.com', '0000 0000 0000 0019', date '2025-01-01', '910');
 
 ----------------------------- CALLS TO UPDATE CREDIT CARD -----------------------------
-call update_credit_card(10, '0000 0000 0000 0090', date '2025-01-01', '0000');
+-- call update_credit_card(10, '0000 0000 0000 0090', date '2025-01-01', '0000');
 
 ----------------------------- CALLS TO ADD COURSES -----------------------------
 call add_course('Introduction to Artificial Intelligence', 'Search, knowledge representation, decision making', 'Artificial Intelligence', 1);
