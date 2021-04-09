@@ -177,6 +177,7 @@ create table Owns (
 	customerId 				integer,
 	ccNumber 				text not null,
 	primary key (customerId),
+	unique (ccNumber),
 	foreign key (customerId) references Customers (customerId) on update cascade,
 	foreign key (ccNumber) references CreditCards (ccNumber) on update cascade
 );
